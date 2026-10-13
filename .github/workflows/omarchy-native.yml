@@ -62,12 +62,16 @@ jobs:
           git -C "$OMARCHY_PATH" checkout --detach FETCH_HEAD
           quickshell --version
           pacman -Q qt6-base qt6-declarative
+      - name: Prepare unprivileged UI test user
+        run: |
+          useradd --create-home native-test
+          chown -R native-test:native-test "$GITHUB_WORKSPACE" "$XDG_RUNTIME_DIR" /tmp/native-bundle
       - name: Native components, themes and rendered previews
-        run: dbus-run-session -- python3 -B scripts/test-omarchy-native.py
+        run: runuser -u native-test -- dbus-run-session -- python3 -B scripts/test-omarchy-native.py
       - name: Native UI interactions and stress
-        run: dbus-run-session -- python3 -B scripts/test-omarchy-ui.py
+        run: runuser -u native-test -- dbus-run-session -- python3 -B scripts/test-omarchy-ui.py
       - name: QML and Rust integration
-        run: dbus-run-session -- python3 -B scripts/test-omarchy-bridge.py
+        run: runuser -u native-test -- dbus-run-session -- python3 -B scripts/test-omarchy-bridge.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -32,6 +32,8 @@ user-data migration or desktop-app installation is needed.
 QML imports now qualify Omarchy's `Color`, `Style` and `Border` through the
 `Commons` namespace. This preserves Shell theme bindings while avoiding the
 `Color` singleton collision found in the Qt 6.12 CI runtime during extraction.
+UI and bridge checks run as an unprivileged container user, matching the native
+installer and shortcut manager's existing refusal to run as root.
 
 `manifest.json` lives at the root. This extraction is not a marketplace
 submission or a claim of marketplace approval. Installing the backend still
