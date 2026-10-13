@@ -65,7 +65,7 @@ class Document(http.server.BaseHTTPRequestHandler):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run-desktop-test', action='store_true', required=True)
-    parser.add_argument('--backend', type=Path, default=ROOT / 'crates/lucas-omarchy/target/debug/lucas-translate-omarchy-backend')
+    parser.add_argument('--backend', type=Path, default=ROOT / 'target/debug/lucas-translate-omarchy-backend')
     args = parser.parse_args()
     assert args.run_desktop_test
     unlocked()

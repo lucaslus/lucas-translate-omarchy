@@ -16,7 +16,7 @@ import threading
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-BINARY = ROOT/'crates/lucas-omarchy/target/debug/lucas-translate-omarchy-backend'
+BINARY = ROOT/'target/debug/lucas-translate-omarchy-backend'
 
 
 def word(value): return struct.pack('<I',value)

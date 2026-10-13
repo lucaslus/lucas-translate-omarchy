@@ -13,8 +13,8 @@ def load(name, path):
     return module
 
 tests = load('legacy_shortcuts_tests', ROOT / 'tests/shortcut_contract.py')
-tests.integration = load('native_shortcuts', ROOT / 'scripts/shortcuts.py')
-tests.TEMPLATE = (ROOT / 'shortcuts.lua').read_text()
+tests.integration = load('native_shortcuts', ROOT / 'runtime/shortcuts.py')
+tests.TEMPLATE = (ROOT / 'runtime/shortcuts.lua').read_text()
 suite = unittest.defaultTestLoader.loadTestsFromTestCase(tests.Shortcuts)
 result = unittest.TextTestRunner(verbosity=1).run(suite)
 raise SystemExit(0 if result.wasSuccessful() else 1)

@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Window
 import Quickshell
 import qs.Commons as Commons
-import "Native" as Native
+import "Native/qml" as Native
 
 ShellRoot {
     id: root

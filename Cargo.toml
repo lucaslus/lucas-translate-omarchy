@@ -1,0 +1,4 @@
+[workspace]
+members = ["crates/lucas-core", "crates/lucas-omarchy"]
+default-members = ["crates/lucas-omarchy"]
+resolver = "2"

@@ -1,25 +1,28 @@
-"""Stage runtime plugin files from the standalone source or a release bundle."""
+"""Stage the same runtime layout from a source checkout or a release bundle."""
 from pathlib import Path
 import shutil
 import sys
 
-RUNTIME_SCRIPTS = ('backend.sh', 'dispatch.sh', 'launch.sh', 'shortcuts.py')
+RUNTIME_FILES = ('backend.sh', 'dispatch.sh', 'launch.sh', 'shortcuts.py', 'shortcuts.lua')
 
 
 def copy_plugin(source, destination):
     source, destination = Path(source), Path(destination)
     destination.mkdir(parents=True)
-    for name in ('manifest.json', 'README.md', 'LICENSE', 'shortcuts.lua'):
+    for name in ('manifest.json', 'README.md', 'LICENSE'):
         shutil.copy2(source / name, destination / name)
-    for pattern in ('*.qml', '*.js'):
-        for path in source.glob(pattern):
-            shutil.copy2(path, destination / path.name)
-    shutil.copytree(source / 'logos', destination / 'logos')
+    for folder, suffixes in [('qml', {'.qml', '.js'}), ('assets', {'.png'})]:
+        for path in (source / folder).rglob('*'):
+            if path.is_file() and path.suffix in suffixes:
+                target = destination / path.relative_to(source)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, target)
     (destination / 'docs').mkdir()
-    shutil.copy2(source / 'docs/MIGRATION.md', destination / 'docs/MIGRATION.md')
-    (destination / 'scripts').mkdir()
-    for name in RUNTIME_SCRIPTS:
-        shutil.copy2(source / 'scripts' / name, destination / 'scripts' / name)
+    for name in ('MIGRATION.md', 'DEVELOPMENT.md'):
+        shutil.copy2(source / 'docs' / name, destination / 'docs' / name)
+    (destination / 'runtime').mkdir()
+    for name in RUNTIME_FILES:
+        shutil.copy2(source / 'runtime' / name, destination / 'runtime' / name)
 
 
 if __name__ == '__main__':

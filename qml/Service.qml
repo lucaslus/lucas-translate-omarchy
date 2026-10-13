@@ -270,7 +270,7 @@ QtObject {
     }
     function reconnect() { failures = 0; if (!backend.running) backend.running = true }
     property Process backend: Process {
-        command: ["bash", Qt.resolvedUrl("scripts/backend.sh").toString().replace(/^file:\/\//, "")]
+        command: ["bash", Qt.resolvedUrl("../runtime/backend.sh").toString().replace(/^file:\/\//, "")]
         running: root.autostart
         stdinEnabled: true
         stdout: SplitParser { onRead: function(line) { root.accept(line) } }

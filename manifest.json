@@ -5,12 +5,16 @@
   "version": "0.1.0",
   "author": "Lucas",
   "description": "Native, theme-following translation, dictionary and local OCR for Omarchy Shell.",
-  "kinds": ["service", "panel", "bar-widget"],
+  "kinds": [
+    "service",
+    "panel",
+    "bar-widget"
+  ],
   "keepLoaded": true,
   "entryPoints": {
-    "service": "Service.qml",
-    "panel": "Panel.qml",
-    "barWidget": "Widget.qml"
+    "service": "qml/Service.qml",
+    "panel": "qml/Panel.qml",
+    "barWidget": "qml/Widget.qml"
   },
   "barWidget": {
     "displayName": "Lucas Translate",

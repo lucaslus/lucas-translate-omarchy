@@ -9,15 +9,16 @@ import tempfile
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+PLUGIN_SOURCE = Path(os.environ.get("LUCAS_PLUGIN_SOURCE", ROOT))
 SHELL = Path(os.environ.get('OMARCHY_PATH', '/usr/share/omarchy')) / 'shell'
 with tempfile.TemporaryDirectory(prefix='lucas-native-qml-test-') as directory:
     root = Path(directory)
     plugin = root / 'Native'
-    copy_plugin(ROOT, plugin)
+    copy_plugin(PLUGIN_SOURCE, plugin)
     # qs imports are relative to the entry shell's configuration root.
     for module in ['Commons', 'Ui']:
         (root / module).symlink_to(SHELL / module, target_is_directory=True)
-    source = (ROOT / 'tests/qml/shell.qml').read_text().replace('import "../../" as Native', 'import "Native" as Native').replace('"../../" + file', '"Native/" + file')
+    source = (ROOT / 'tests/qml/shell.qml').read_text()
     (root / 'shell.qml').write_text(source)
     result = subprocess.run(['quickshell', '-p', str(root), '--no-color'], capture_output=True, text=True, timeout=25, env=dict(os.environ,QT_QPA_PLATFORM='offscreen',QSG_RHI_BACKEND='opengl',LIBGL_ALWAYS_SOFTWARE='1'))
     output = result.stdout + result.stderr
@@ -25,7 +26,7 @@ with tempfile.TemporaryDirectory(prefix='lucas-native-qml-test-') as directory:
     failures = ['NATIVE_QML_FAIL', 'ReferenceError:', 'TypeError:', 'Binding loop', 'ERROR:', 'Failed to load configuration', 'Unable to assign']
     if result.returncode != 0 or 'NATIVE_QML_PASS' not in output or any(item in output for item in failures):
         raise SystemExit(1)
-    preview = ROOT / 'dist/omarchy/preview'
+    preview = ROOT / 'dist/preview'
     preview.mkdir(parents=True, exist_ok=True)
     (root / 'shell.qml').write_text((ROOT / 'tests/qml/preview.qml').read_text())
     environment = dict(os.environ, QT_QPA_PLATFORM='offscreen', NATIVE_PREVIEW_DIR=str(preview))

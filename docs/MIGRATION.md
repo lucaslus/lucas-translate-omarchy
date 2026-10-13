@@ -8,12 +8,15 @@ because desktop-only files were excluded and plugin paths were relocated.
 
 ## Scope
 
-- `omarchy/` became the repository root: QML, JavaScript, manifest, assets,
-  runtime scripts and native tests.
+- The original `omarchy/` plugin was extracted with its relevant history.
+  The manifest stays at the root, with QML and JavaScript in `qml/`, provider
+  images in `assets/`, and runtime integration in `runtime/`.
 - `crates/lucas-omarchy/` is the standalone Rust backend.
 - `crates/lucas-core/` is a source snapshot of the shared translation core.
   It is included locally so builds require no checkout of the desktop repository.
 - Native build, installation, validation and UI test scripts moved with the plugin.
+- Both Rust crates belong to one root workspace with a single `Cargo.lock`
+  and `target/`. The backend's dependency versions were retained.
 - The screenshot editor build helper and its MPL-2.0 patch notices were retained.
   The editor remains an optional external executable, not a Tauri dependency.
 
@@ -42,10 +45,14 @@ requires the documented installer, even when the Shell clones the QML plugin.
 ## Build and release
 
 Build on Linux with `bash scripts/build-omarchy-native.sh`. The archive contains
-root-level plugin files, the backend, and installer helpers. The installer stages
+the root manifest, `qml/`, `assets/`, `runtime/`, the backend, and installer helpers.
+The runtime layout is identical in the checkout, archive and installed plugin;
+there is no flattened second copy of the source. The installer stages
 only runtime assets; Git metadata, Rust source, tests and build output are excluded.
 
 The CI workflow tests the backend, core, shortcuts, transactional installation,
 private Wayland transfers and QML interactions. Publishing a `v<version>` tag runs
 the same checks before creating a draft release. The tag must match both the
 plugin manifest and the Rust backend package version.
+
+See [Development guide](DEVELOPMENT.md) for the current source layout.

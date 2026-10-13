@@ -17,7 +17,7 @@ Item {
     visible: brand !== ""
     Image {
         anchors.fill: parent
-        source: root.brand ? Qt.resolvedUrl("logos/" + root.brand + ".png") : ""
+        source: root.brand ? Qt.resolvedUrl("../assets/logos/" + root.brand + ".png") : ""
         // Ignore transparent padding and DeepL's wordmark so symbols share a visual size.
         sourceClipRect: root.brand ? root.symbolBounds : undefined
         fillMode: Image.PreserveAspectFit

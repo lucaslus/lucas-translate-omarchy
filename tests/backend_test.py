@@ -13,7 +13,7 @@ import unittest
 import selection_tools
 
 ROOT = Path(__file__).resolve().parents[1]
-BINARY = Path(os.environ.get('LUCAS_NATIVE_BACKEND', ROOT / 'crates/lucas-omarchy/target/debug/lucas-translate-omarchy-backend'))
+BINARY = Path(os.environ.get('LUCAS_NATIVE_BACKEND', ROOT / 'target/debug/lucas-translate-omarchy-backend'))
 
 
 class Provider(http.server.BaseHTTPRequestHandler):

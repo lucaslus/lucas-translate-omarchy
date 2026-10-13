@@ -188,12 +188,12 @@ async fn dispatch(request: Request, sink: EventSink, plugin: PathBuf) {
             Err(e) => Err(e),
         },
         "shortcuts.status" | "shortcuts.check" | "shortcuts.save" => {
-            let template = std::fs::read_to_string(plugin.join("shortcuts.lua"));
+            let template = std::fs::read_to_string(plugin.join("runtime/shortcuts.lua"));
             match template {
                 Ok(template) => {
                     let mut child = tokio::process::Command::new("python3");
                     child
-                        .arg(plugin.join("scripts/shortcuts.py"))
+                        .arg(plugin.join("runtime/shortcuts.py"))
                         .args(["--template-text", &template]);
                     if request.method == "shortcuts.status" {
                         child.arg("--status");

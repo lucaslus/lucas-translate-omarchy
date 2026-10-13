@@ -13,6 +13,7 @@ import time
 import zlib
 
 ROOT = Path(__file__).resolve().parents[1]
+PLUGIN_SOURCE = Path(os.environ.get("LUCAS_PLUGIN_SOURCE", ROOT))
 SHELL = Path(os.environ.get('OMARCHY_PATH','/usr/share/omarchy')) / 'shell'
 
 
@@ -29,7 +30,7 @@ def main():
         scratch = Path(directory)
         config = scratch / 'config'
         config.mkdir()
-        copy_plugin(ROOT,config / 'Native')
+        copy_plugin(PLUGIN_SOURCE,config / 'Native')
         for module in ['Commons','Ui']:
             (config / module).symlink_to(SHELL / module,target_is_directory=True)
         (config / 'shell.qml').write_text((ROOT / 'tests/qml/ui.qml').read_text())
@@ -51,7 +52,7 @@ def main():
         passed = result.returncode == 0 and match is not None and len(cases) == int(match[1]) and not any(item in output for item in failures)
         report = {'passed':passed,'cases':cases,'count':len(cases),'duration_seconds':round(time.monotonic()-started,2),
                   'renderer':'offscreen Qt RHI / Mesa software OpenGL'}
-        reports = ROOT / 'dist/omarchy/test-results'; reports.mkdir(parents=True,exist_ok=True)
+        reports = ROOT / 'dist/test-results'; reports.mkdir(parents=True,exist_ok=True)
         (reports / 'ui.json').write_text(json.dumps(report,indent=2)+'\n')
         (reports / 'ui.log').write_text(output)
         print(output)

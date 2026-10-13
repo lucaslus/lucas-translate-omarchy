@@ -19,7 +19,7 @@ without replacing its input, results or running requests. Font sizes, spacing an
 surface styling follow the Shell's effective settings, including user overrides.
 All native text and controls use the desktop's `sans-serif` fontconfig alias,
 including language fallbacks, rather than the Shell bar's monospace font. The
-family is defined centrally in `Typography.js`; no font is bundled or installed.
+family is defined centrally in `qml/Typography.js`; no font is bundled or installed.
 The compact panel is 440 logical pixels wide at the default Shell scale, with
 a short empty state that expands for results. The title-free toolbar uses uniform vector icons for history, favorites and
 settings, with named navigation tooltips; result sections use separators rather than nested
@@ -76,7 +76,7 @@ For a backend built separately:
 
 ```sh
 python3 scripts/install-omarchy-native.py \
-  --binary crates/lucas-omarchy/target/release/lucas-translate-omarchy-backend
+  --binary target/release/lucas-translate-omarchy-backend
 ```
 
 `--without-shortcuts` installs the plugin without changing Hyprland bindings.
@@ -196,9 +196,9 @@ and creates a draft GitHub release with the Linux archive and SHA-256 checksum.
 ## Verification
 
 ```sh
-cargo test --manifest-path crates/lucas-core/Cargo.toml --locked -- --skip network
-cargo test --manifest-path crates/lucas-omarchy/Cargo.toml --locked
-cargo build --manifest-path crates/lucas-omarchy/Cargo.toml --locked
+cargo test --package lucas-core --locked -- --skip network
+cargo test --package lucas-translate-omarchy-backend --locked
+cargo build --locked
 python3 tests/backend_test.py
 python3 -B tests/stability_test.py
 python3 tests/shortcuts_test.py
@@ -209,6 +209,8 @@ python3 -B scripts/test-omarchy-bridge.py
 omarchy plugin validate .
 ```
 
+源码目录、Rust workspace 与发布包边界见 [Development guide](docs/DEVELOPMENT.md)。
+
 Backend tests use a local HTTP fixture and fake clipboard/capture tools; they
 do not call public providers or modify the real clipboard. The QML test loads
 actual Shell components in a temporary, windowless test configuration and
@@ -217,7 +219,7 @@ preservation of input/results/running requests. CI runs backend, shortcut, compo
 actual controls in an offscreen Mesa window. The bridge runner additionally
 connects the actual QML service to the Rust binary and a localhost provider.
 Capture, OCR and clipboard executables are replaced with isolated fixtures.
-JSON reports and logs are saved under `dist/omarchy/test-results`. Run the native
+JSON reports and logs are saved under `dist/test-results`. Run the native
 backend and Quickshell checks on Linux; macOS cannot exercise this runtime.
 
 Stability checks exercise malformed transport/provider responses, rate limits,

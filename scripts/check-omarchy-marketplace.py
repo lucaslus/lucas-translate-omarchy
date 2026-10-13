@@ -81,7 +81,7 @@ def main():
                    'https://github.com/omacom/omarchy-plugin-marketplace/blob/main/SECURITY.md',
                    'https://github.com/omacom/omarchy-plugin-marketplace/blob/main/VERIFICATION.md']
     }
-    reports = ROOT / 'dist/omarchy/test-results'; reports.mkdir(parents=True,exist_ok=True)
+    reports = ROOT / 'dist/test-results'; reports.mkdir(parents=True,exist_ok=True)
     destination = reports / 'marketplace.json'
     destination.write_text(json.dumps(report,indent=2,ensure_ascii=False)+'\n')
     print(json.dumps({'eligible':False,'local_validation_passed':validation.returncode==0,'registry_matches':matches,

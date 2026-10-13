@@ -233,7 +233,7 @@ def main():
     folder = Path.home() / '.config/hypr'
     if not (folder / 'hyprland.lua').is_file():
         raise ValueError('需要 Omarchy 的 Hyprland Lua 配置')
-    template = args.template_text or (Path(__file__).resolve().parents[1] / 'shortcuts.lua').read_text()
+    template = args.template_text or (Path(__file__).resolve().parent / 'shortcuts.lua').read_text()
     mode = 'check' if args.check is not None else 'status' if args.status else 'apply'
     raw = args.check if args.check is not None else args.apply
     with (folder / '.lucas-translate.lock').open('a') as lock:

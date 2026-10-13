@@ -3,7 +3,7 @@ import QtQuick.Window
 import QtTest
 import Quickshell
 import qs.Commons as Commons
-import "Native" as Native
+import "Native/qml" as Native
 
 ShellRoot {
     id: root

@@ -16,9 +16,10 @@ import zlib
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+PLUGIN_SOURCE = Path(os.environ.get("LUCAS_PLUGIN_SOURCE", ROOT))
 sys.path.insert(0,str(ROOT/'tests'))
 import selection_tools
-BINARY = Path(os.environ.get('LUCAS_NATIVE_BACKEND',ROOT / 'crates/lucas-omarchy/target/debug/lucas-translate-omarchy-backend'))
+BINARY = Path(os.environ.get('LUCAS_NATIVE_BACKEND',ROOT / 'target/debug/lucas-translate-omarchy-backend'))
 
 
 class Provider(http.server.BaseHTTPRequestHandler):
@@ -44,7 +45,7 @@ def main():
     try:
         with tempfile.TemporaryDirectory(prefix='lucas-native-rust-bridge-') as directory:
             scratch=Path(directory); config=scratch / 'config'; config.mkdir()
-            copy_plugin(ROOT,config / 'Native')
+            copy_plugin(PLUGIN_SOURCE,config / 'Native')
             shell=Path(os.environ.get('OMARCHY_PATH','/usr/share/omarchy')) / 'shell'
             for module in ['Commons','Ui']:
                 (config / module).symlink_to(shell / module,target_is_directory=True)
@@ -90,7 +91,7 @@ def main():
             report={'passed':passed,'count':len(cases),'cases':cases,'duration_seconds':round(time.monotonic()-started,2),
                     'backend':str(BINARY),'network':'localhost fixture only','desktop_tools':'isolated executables',
                     'copied_screenshot_dimensions':[320,240] if passed else None}
-            reports=ROOT / 'dist/omarchy/test-results'; reports.mkdir(parents=True,exist_ok=True)
+            reports=ROOT / 'dist/test-results'; reports.mkdir(parents=True,exist_ok=True)
             (reports / 'bridge.json').write_text(json.dumps(report,indent=2)+'\n'); (reports / 'bridge.log').write_text(output)
             print(output); print(json.dumps(report,indent=2))
             if not passed:

@@ -1,7 +1,7 @@
 import QtQuick
 import Quickshell
 import qs.Commons as Commons
-import "../../" as Native
+import "Native/qml" as Native
 
 ShellRoot {
     id: root
@@ -10,7 +10,7 @@ ShellRoot {
     property var objects: []
     function check(condition, message) { if (!condition) throw new Error(message) }
     function make(file, properties) {
-        var component = Qt.createComponent("../../" + file)
+        var component = Qt.createComponent("Native/qml/" + file)
         check(component.status === Component.Ready, file + ": " + component.errorString())
         var object = component.createObject(host, properties || {})
         check(!!object, "Cannot instantiate " + file)

@@ -326,7 +326,7 @@ if __name__ == '__main__':
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     report = {'passed': result.wasSuccessful(), 'count': result.testsRun, 'backend':str(fixture.BINARY), 'duration_seconds': round(time.monotonic()-started,2),
               'failures': [case.id() for case, _ in result.failures + result.errors], 'metrics': metrics}
-    reports = fixture.ROOT / 'dist/omarchy/test-results'; reports.mkdir(parents=True, exist_ok=True)
+    reports = fixture.ROOT / 'dist/test-results'; reports.mkdir(parents=True, exist_ok=True)
     (reports / 'stability.json').write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report, indent=2))
     raise SystemExit(0 if result.wasSuccessful() else 1)

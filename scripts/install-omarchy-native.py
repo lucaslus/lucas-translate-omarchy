@@ -39,7 +39,7 @@ def stamp_revision(staging, binary):
             digest.update(path.read_bytes() + b'\0')
     digest.update(binary.read_bytes())
     revision = digest.hexdigest()
-    (staging / 'BuildInfo.js').write_text('var revision = ' + json.dumps(revision) + '\n')
+    (staging / 'qml/BuildInfo.js').write_text('var revision = ' + json.dumps(revision) + '\n')
     return revision
 
 
@@ -112,8 +112,8 @@ def main():
     if args.binary:
         binary = args.binary.resolve()
     else:
-        run('cargo', 'build', '--release', '--locked', '--manifest-path', str(ROOT / 'crates/lucas-omarchy/Cargo.toml'))
-        binary = ROOT / 'crates/lucas-omarchy/target/release/lucas-translate-omarchy-backend'
+        run('cargo', 'build', '--release', '--locked', '--manifest-path', str(ROOT / 'Cargo.toml'), '--package', 'lucas-translate-omarchy-backend')
+        binary = ROOT / 'target/release/lucas-translate-omarchy-backend'
     if not binary.is_file() or not os.access(binary, os.X_OK):
         raise SystemExit(f'Missing backend executable: {binary}')
     config = Path(os.environ.get('XDG_CONFIG_HOME', str(Path.home() / '.config')))
@@ -158,8 +158,8 @@ def install(binary, config, target, destination, desktop, without_shortcuts):
         staging.replace(target)
     # Atomic executable replacement works even while the old inode is running.
     for source, name in [(binary, 'lucas-translate-omarchy-backend'),
-                         (ROOT / 'scripts/launch.sh', 'lucas-translate-native'),
-                         (ROOT / 'scripts/dispatch.sh', 'lucas-translate')]:
+                         (ROOT / 'runtime/launch.sh', 'lucas-translate-native'),
+                         (ROOT / 'runtime/dispatch.sh', 'lucas-translate')]:
         temp = destination / (name + '.installing')
         shutil.copy2(source, temp)
         temp.chmod(0o755)
@@ -182,7 +182,7 @@ def install(binary, config, target, destination, desktop, without_shortcuts):
         raise RuntimeError('Shell refused to enable the native plugin; installation rolled back.')
     verify_revision(revision)
     if not without_shortcuts:
-        run('python3', str(target / 'scripts/shortcuts.py'))
+        run('python3', str(target / 'runtime/shortcuts.py'))
         run('hyprctl', 'reload', capture_output=True)
         errors = run('hyprctl', 'configerrors', capture_output=True).stdout.strip()
         if errors:

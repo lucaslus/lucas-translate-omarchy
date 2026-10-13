@@ -21,9 +21,10 @@ class Integration(unittest.TestCase):
             scratch = Path(directory)
             source = scratch / 'source'
             copy_plugin(ROOT, source)
+            (source / 'scripts').mkdir()
             for name in ['build-omarchy-native.sh', 'install-omarchy-native.py', 'plugin_files.py']:
                 (source / 'scripts' / name).write_bytes((ROOT / 'scripts' / name).read_bytes())
-            backend = source / 'crates/lucas-omarchy/target/release/lucas-translate-omarchy-backend'
+            backend = source / 'target/release/lucas-translate-omarchy-backend'
             backend.parent.mkdir(parents=True)
             backend.write_text('#!/bin/sh\nexit 0\n')
             tools = scratch / 'tools'
@@ -37,11 +38,12 @@ class Integration(unittest.TestCase):
                            stdout=subprocess.PIPE, text=True,
                            env=dict(os.environ, PATH=str(tools) + os.pathsep + os.environ['PATH']))
             version = json.loads((ROOT / 'manifest.json').read_text())['version']
-            archive = source / f'dist/omarchy/lucas-translate-omarchy-{version}-x86_64.tar.gz'
+            archive = source / f'dist/lucas-translate-omarchy-{version}-x86_64.tar.gz'
             with tarfile.open(archive) as bundle:
                 names = {member.name for member in bundle.getmembers()}
                 prefix = 'lucas-translate-omarchy/'
-                for name in ['manifest.json', 'Panel.qml', 'scripts/install-omarchy-native.py',
+                for name in ['manifest.json', 'qml/Panel.qml', 'assets/logos/youdao.png',
+                             'runtime/backend.sh', 'runtime/shortcuts.lua', 'scripts/install-omarchy-native.py',
                              'scripts/plugin_files.py', 'docs/MIGRATION.md', 'bin/lucas-translate-omarchy-backend']:
                     self.assertIn(prefix + name, names)
                 for name in ['omarchy', 'crates', 'tests', '.git']:
@@ -49,8 +51,14 @@ class Integration(unittest.TestCase):
                 self.assertTrue(bundle.getmember(prefix + 'bin/lucas-translate-omarchy-backend').mode & 0o111)
                 bundle.extractall(scratch / 'extracted', filter='data')
             staged = scratch / 'staged'
-            copy_plugin(scratch / 'extracted/lucas-translate-omarchy', staged)
-            self.assertEqual((staged / 'Panel.qml').read_bytes(), (ROOT / 'Panel.qml').read_bytes())
+            extracted = scratch / 'extracted/lucas-translate-omarchy'
+            copy_plugin(extracted, staged)
+            for path in staged.rglob('*'):
+                if path.is_file():
+                    self.assertEqual(path.read_bytes(), (ROOT / path.relative_to(staged)).read_bytes())
+            subprocess.run([sys.executable, str(extracted / 'scripts/install-omarchy-native.py'), '--help'],
+                           check=True, stdout=subprocess.PIPE, text=True)
+            self.installer_fixture(installer_root=extracted)
 
     def test_selection_launcher_pins_source_without_window_title(self):
         with tempfile.TemporaryDirectory(prefix='lucas-selection-launch-') as directory:
@@ -59,14 +67,14 @@ class Integration(unittest.TestCase):
             hyprctl=tools/'hyprctl';hyprctl.write_text('#!/usr/bin/env python3\nimport json\nprint('+repr(json.dumps(source))+')\n');hyprctl.chmod(0o755)
             shell=tools/'omarchy-shell';shell.write_text('#!/usr/bin/env python3\nimport json,sys\nprint(json.dumps(sys.argv[1:]))\n');shell.chmod(0o755)
             environment=dict(os.environ,PATH=str(tools)+os.pathsep+os.environ['PATH'])
-            result=subprocess.run(['bash',str(ROOT/'scripts/launch.sh'),'--selection'],capture_output=True,text=True,env=environment,check=True)
+            result=subprocess.run(['bash',str(ROOT/'runtime/launch.sh'),'--selection'],capture_output=True,text=True,env=environment,check=True)
             arguments=json.loads(result.stdout)
             self.assertEqual(arguments[:3],['shell','summon','lucas.translate'])
             self.assertEqual(json.loads(arguments[3]),{'action':'selection','source':{key:source[key] for key in ['address','pid','class']}})
 
-    def installer_fixture(self, failure=None, initially_installed=True, stale_ui=False):
+    def installer_fixture(self, failure=None, initially_installed=True, stale_ui=False, installer_root=ROOT):
         """Run the actual transaction with every Shell/Hyprland command intercepted."""
-        spec = importlib.util.spec_from_file_location('native_installer', ROOT / 'scripts/install-omarchy-native.py')
+        spec = importlib.util.spec_from_file_location('native_installer', installer_root / 'scripts/install-omarchy-native.py')
         installer = importlib.util.module_from_spec(spec); spec.loader.exec_module(installer)
         with tempfile.TemporaryDirectory(prefix='lucas-native-install-transaction-') as directory:
             scratch = Path(directory); home = scratch / 'home'; home.mkdir()
@@ -101,13 +109,18 @@ class Integration(unittest.TestCase):
                     raise subprocess.CalledProcessError(1, arguments)
                 if arguments[:3] == ('omarchy', 'plugin', 'validate') and failure == 'validate':
                     raise subprocess.CalledProcessError(1, arguments)
+                if arguments[:3] == ('omarchy', 'plugin', 'validate'):
+                    plugin = Path(arguments[3])
+                    manifest = json.loads((plugin / 'manifest.json').read_text())
+                    for entry in manifest['entryPoints'].values():
+                        self.assertTrue((plugin / entry).is_file(), entry)
                 if arguments[:3] == ('omarchy-shell', 'shell', 'listPlugins'):
                     listed += 1
                     output = 'not json' if failure == 'discover' else json.dumps([{'id':'lucas.translate', 'enabled':not (failure == 'final' and listed > 1)}])
                 if arguments[:3] == ('omarchy-shell', 'shell', 'call'):
                     output = 'ready'
                     if arguments[-1] == 'revision':
-                        output = 'old cached UI' if failure == 'revision' or (stale_ui and not restarted) else json.loads((target / 'BuildInfo.js').read_text().split('=', 1)[1])
+                        output = 'old cached UI' if failure == 'revision' or (stale_ui and not restarted) else json.loads((target / 'qml/BuildInfo.js').read_text().split('=', 1)[1])
                 if arguments[:3] == ('omarchy', 'restart', 'shell'): restarted = True
                 if arguments[:2] == ('hyprctl', 'configerrors'): output = 'invalid config' if failure == 'shortcuts' else ''
                 return subprocess.CompletedProcess(arguments, 0, stdout=output, stderr='')
@@ -130,7 +143,8 @@ class Integration(unittest.TestCase):
                     self.assertTrue((target / 'manifest.json').is_file())
                     self.assertEqual((destination / 'lucas-translate-omarchy-backend').read_text(), binary.read_text())
                     self.assertTrue({'tests', 'crates', '.git', '.github', 'dist'}.isdisjoint(value.name for value in target.iterdir()))
-                    self.assertEqual({value.name for value in (target / 'scripts').iterdir()}, {'backend.sh', 'dispatch.sh', 'launch.sh', 'shortcuts.py'})
+                    self.assertFalse((target / 'scripts').exists())
+                    self.assertEqual({value.name for value in (target / 'runtime').iterdir()}, {'backend.sh', 'dispatch.sh', 'launch.sh', 'shortcuts.py', 'shortcuts.lua'})
                     backups = list((home / '.local/state/lucas-translate-omarchy/install-backups').iterdir())
                     self.assertEqual(len(backups), 1)
                     self.assertEqual((backups[0] / 'hyprland.lua').read_text(), 'original hyprland.lua')
@@ -150,8 +164,8 @@ class Integration(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('native_installer', ROOT / 'scripts/install-omarchy-native.py')
         installer = importlib.util.module_from_spec(spec); spec.loader.exec_module(installer)
         with tempfile.TemporaryDirectory() as directory:
-            staging = Path(directory) / 'plugin'; staging.mkdir()
-            ui = staging / 'Panel.qml'; ui.write_text('old UI')
+            staging = Path(directory) / 'plugin'; (staging / 'qml').mkdir(parents=True)
+            ui = staging / 'qml/Panel.qml'; ui.write_text('old UI')
             binary = Path(directory) / 'backend'; binary.write_bytes(b'old backend')
             first = installer.stamp_revision(staging, binary)
             self.assertEqual(first, installer.stamp_revision(staging, binary))
@@ -193,7 +207,7 @@ class Integration(unittest.TestCase):
                 ('', '', '0', False),
             ]:
                 with self.subTest(hyprland=hyprland, omarchy=omarchy):
-                    result = subprocess.run(['bash', '-c', wrapper, 'test', str(ROOT / 'scripts/dispatch.sh'), *arguments],
+                    result = subprocess.run(['bash', '-c', wrapper, 'test', str(ROOT / 'runtime/dispatch.sh'), *arguments],
                         capture_output=True, env=dict(environment, HYPRLAND_INSTANCE_SIGNATURE=hyprland, OMARCHY_PATH=omarchy,
                                                       NATIVE_TEST_SHELL_STATUS=shell_status))
                     if native or desktop:
