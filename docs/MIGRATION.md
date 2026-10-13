@@ -29,6 +29,10 @@ managed desktop shortcuts, data paths and credential namespaces are unchanged.
 Existing native installations can update using the standalone installer; no
 user-data migration or desktop-app installation is needed.
 
+QML imports now qualify Omarchy's `Color`, `Style` and `Border` through the
+`Commons` namespace. This preserves Shell theme bindings while avoiding the
+`Color` singleton collision found in the Qt 6.12 CI runtime during extraction.
+
 `manifest.json` lives at the root. This extraction is not a marketplace
 submission or a claim of marketplace approval. Installing the backend still
 requires the documented installer, even when the Shell clones the QML plugin.

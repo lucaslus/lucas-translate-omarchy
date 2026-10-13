@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import qs.Commons
+import qs.Commons as Commons
 import qs.Ui as Ui
 import "Strings.js" as Strings
 import "Model.js" as Model
@@ -18,7 +18,7 @@ ColumnLayout {
     property string search: ""
     property int generation: 0
     signal queryRequested(string text)
-    spacing: Style.spacing.md
+    spacing: Commons.Style.spacing.md
     function tr(key) { return service ? service.tr(key) : Strings.text(key, "en") }
 
     function load(append) {
@@ -49,7 +49,7 @@ ColumnLayout {
         visible: !root.favorite && root.rows.length > 0
         Layout.fillWidth: true
         Item { Layout.fillWidth: true }
-        NativeButton { foreground: Color.popups.text;
+        NativeButton { foreground: Commons.Color.popups.text;
             objectName: "clearHistory"
             visible: !root.favorite && root.rows.length > 0
             text: root.tr(root.confirmClear ? "confirmClear" : "clearHistory"); focusable: true
@@ -66,7 +66,7 @@ ColumnLayout {
         ScrollBar.vertical: NativeScrollBar {}
         ColumnLayout {
             id: column
-            width: parent.width; spacing: Style.spacing.md
+            width: parent.width; spacing: Commons.Style.spacing.md
             Repeater {
                 model: root.rows
                 Ui.BorderSurface {
@@ -74,18 +74,18 @@ ColumnLayout {
                     required property var modelData
                     property bool expanded: false
                     Layout.fillWidth: true
-                    padding: Style.spacing.sm; radius: Style.cornerRadius
+                    padding: Commons.Style.spacing.sm; radius: Commons.Style.cornerRadius
                     color: "transparent"
-                    borderSpec: Border.none()
+                    borderSpec: Commons.Border.none()
                     implicitHeight: content.implicitHeight + contentTopInset + contentBottomInset
                     ColumnLayout {
                         id: content
                         x: record.contentLeftInset; y: record.contentTopInset
                         width: record.width - record.contentLeftInset - record.contentRightInset
-                        spacing: Style.spacing.sm
-                        Ui.PanelSeparator { Layout.fillWidth: true; foreground: Color.popups.text }
+                        spacing: Commons.Style.spacing.sm
+                        Ui.PanelSeparator { Layout.fillWidth: true; foreground: Commons.Color.popups.text }
                         NativeText { text: record.modelData.text; Layout.fillWidth: true; maximumLineCount: record.expanded ? 2147483647 : 3; elide: Text.ElideRight; font.bold: true }
-                        NativeArea { visible: !record.expanded || !(record.modelData.details || []).length; text: record.modelData.result; Layout.fillWidth: true; readOnly: true; padding: 0; background: null; clip: true; implicitHeight: record.expanded ? contentHeight : Math.min(contentHeight, Style.space(140)) }
+                        NativeArea { visible: !record.expanded || !(record.modelData.details || []).length; text: record.modelData.result; Layout.fillWidth: true; readOnly: true; padding: 0; background: null; clip: true; implicitHeight: record.expanded ? contentHeight : Math.min(contentHeight, Commons.Style.space(140)) }
                         NativeButton { objectName: "record.expand."+record.modelData.id; text: root.tr(record.expanded ? "collapse" : "viewResults"); focusable: true; onClicked: record.expanded=!record.expanded }
                         Repeater {
                             model: record.expanded ? record.modelData.details || [] : []
@@ -94,8 +94,8 @@ ColumnLayout {
                         RowLayout {
                             Layout.fillWidth: true
                             ProviderIcon { objectName: "record.providerIcon." + record.modelData.id; provider: record.modelData.service }
-                            NativeText { text: Model.providerLabel(record.modelData.service, root.service.language); secondary: true; font.pixelSize: Style.font.caption; Layout.fillWidth: true }
-                            NativeButton { foreground: Color.popups.text; objectName: "record.translate." + record.modelData.id; text: root.tr("translate"); focusable: true; onClicked: root.queryRequested(record.modelData.text) }
+                            NativeText { text: Model.providerLabel(record.modelData.service, root.service.language); secondary: true; font.pixelSize: Commons.Style.font.caption; Layout.fillWidth: true }
+                            NativeButton { foreground: Commons.Color.popups.text; objectName: "record.translate." + record.modelData.id; text: root.tr("translate"); focusable: true; onClicked: root.queryRequested(record.modelData.text) }
                             NativeIconButton { objectName: "record.copy." + record.modelData.id; name: "copy"; tooltipText: root.tr("copy"); onClicked: root.service.copy(record.modelData.result) }
                             NativeIconButton {
                                 objectName: "record.favorite." + record.modelData.id
@@ -112,7 +112,7 @@ ColumnLayout {
                     }
                 }
             }
-            NativeButton { foreground: Color.popups.text; objectName: "loadMore"; visible: root.more; text: root.tr("more"); focusable: true; enabled: !root.loading; onClicked: root.load(true) }
+            NativeButton { foreground: Commons.Color.popups.text; objectName: "loadMore"; visible: root.more; text: root.tr("more"); focusable: true; enabled: !root.loading; onClicked: root.load(true) }
         }
     }
 }

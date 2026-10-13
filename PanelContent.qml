@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import qs.Commons
+import qs.Commons as Commons
 import qs.Ui as Ui
 import "Strings.js" as Strings
 
@@ -9,8 +9,8 @@ Ui.BorderSurface {
     id: frame
     objectName: "nativePanel"
     required property var controller
-    readonly property real preferredHeight: controller.page !== "translate" ? Style.space(620)
-        : controller.service && (controller.service.busy || controller.service.cards.length) ? Style.space(600) : Style.space(300)
+    readonly property real preferredHeight: controller.page !== "translate" ? Commons.Style.space(620)
+        : controller.service && (controller.service.busy || controller.service.cards.length) ? Commons.Style.space(600) : Commons.Style.space(300)
     function focusInput() { input.forceActiveFocus() }
     property int activeResult: 0
     function selectResult(step) {
@@ -48,10 +48,10 @@ Ui.BorderSurface {
         var card=frame.controller.service.cards[frame.activeResult]
         if (card && !card.pending && !card.error) frame.controller.service.copy(card.paragraphs.join("\n"))
     } }
-    padding: Style.spacing.panelPadding
-    color: Color.popups.background
-    radius: Style.cornerRadius
-    borderSpec: Border.surfaceSpec("popups", "border", Color.popups.border, Style.normalBorderWidth)
+    padding: Commons.Style.spacing.panelPadding
+    color: Commons.Color.popups.background
+    radius: Commons.Style.cornerRadius
+    borderSpec: Commons.Border.surfaceSpec("popups", "border", Commons.Color.popups.border, Commons.Style.normalBorderWidth)
     MouseArea { anchors.fill: parent; onClicked: {} }
     FocusScope {
         id: body
@@ -61,10 +61,10 @@ Ui.BorderSurface {
         focus: true
         Keys.onEscapePressed: frame.controller.handleEscape()
         ColumnLayout {
-            anchors.fill: parent; spacing: Style.spacing.md
+            anchors.fill: parent; spacing: Commons.Style.spacing.md
             RowLayout {
                 Layout.fillWidth: true
-                spacing: Style.spacing.xs
+                spacing: Commons.Style.spacing.xs
                 Repeater {
                     model: ["translate", "history", "favorites", "settings"]
                     NativeIconButton {
@@ -73,7 +73,7 @@ Ui.BorderSurface {
                         name: modelData; tooltipText: frame.controller.tr(modelData)
                         Accessible.name: tooltipText
                         selected: frame.controller.page === modelData; focusable: true
-                        foreground: Color.popups.text
+                        foreground: Commons.Color.popups.text
                         onClicked: {
                             frame.controller.page = modelData
                             if (modelData === "translate") Qt.callLater(frame.focusInput)
@@ -81,7 +81,7 @@ Ui.BorderSurface {
                     }
                 }
                 Item { Layout.fillWidth: true }
-                NativeIconButton { objectName: "panelClose"; name: "close"; tooltipText: frame.controller.tr("close"); Accessible.name: tooltipText; foreground: Color.popups.text; focusable: true; onClicked: frame.controller.dismiss() }
+                NativeIconButton { objectName: "panelClose"; name: "close"; tooltipText: frame.controller.tr("close"); Accessible.name: tooltipText; foreground: Commons.Color.popups.text; focusable: true; onClicked: frame.controller.dismiss() }
             }
             RowLayout {
                 visible: !frame.controller.service || !frame.controller.service.ready
@@ -89,13 +89,13 @@ Ui.BorderSurface {
                 NativeText { text: frame.controller.tr("backend"); secondary: true; Layout.fillWidth: true }
                 NativeButton { text: frame.controller.tr("retry"); focusable: true; onClicked: if (frame.controller.service) frame.controller.service.reconnect() }
             }
-            NativeText { visible: !!frame.controller.service && !!frame.controller.service.error; text: frame.controller.service ? Strings.message(frame.controller.service.error,frame.controller.language) : ""; color: Color.urgent; Layout.fillWidth: true }
-            NativeText { visible: !!frame.controller.service && !!frame.controller.service.notice; text: frame.controller.service ? Strings.message(frame.controller.service.notice,frame.controller.language) : ""; color: Color.accent; Layout.fillWidth: true }
+            NativeText { visible: !!frame.controller.service && !!frame.controller.service.error; text: frame.controller.service ? Strings.message(frame.controller.service.error,frame.controller.language) : ""; color: Commons.Color.urgent; Layout.fillWidth: true }
+            NativeText { visible: !!frame.controller.service && !!frame.controller.service.notice; text: frame.controller.service ? Strings.message(frame.controller.service.notice,frame.controller.language) : ""; color: Commons.Color.accent; Layout.fillWidth: true }
             ColumnLayout {
                 visible: frame.controller.page === "translate"
-                Layout.fillWidth: true; Layout.fillHeight: true; spacing: Style.spacing.md
+                Layout.fillWidth: true; Layout.fillHeight: true; spacing: Commons.Style.spacing.md
                 ScrollView {
-                    Layout.fillWidth: true; Layout.preferredHeight: Style.space(92)
+                    Layout.fillWidth: true; Layout.preferredHeight: Commons.Style.space(92)
                     clip: true
                     ScrollBar.vertical: NativeScrollBar {}
                     ScrollBar.horizontal: NativeScrollBar { policy: ScrollBar.AlwaysOff }
@@ -123,8 +123,8 @@ Ui.BorderSurface {
                         objectName: "languageControls"
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.verticalCenter: parent.verticalCenter
-                        width: Math.min(Style.space(280), Math.max(0, parent.width - 2 * (translationActions.implicitWidth + Style.spacing.xs)))
-                        spacing: Style.spacing.xs
+                        width: Math.min(Commons.Style.space(280), Math.max(0, parent.width - 2 * (translationActions.implicitWidth + Commons.Style.spacing.xs)))
+                        spacing: Commons.Style.spacing.xs
                         NativeDropdown {
                             objectName: "sourceLanguage"
                             label: frame.controller.tr("source"); showLabel: false; Accessible.name: label; options: Strings.languages(frame.controller.language)
@@ -148,7 +148,7 @@ Ui.BorderSurface {
                         objectName: "translationActions"
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: Style.spacing.xs
+                        spacing: Commons.Style.spacing.xs
                         NativeIconButton { objectName: "clearInput"; name: "clear"; tooltipText: frame.controller.tr("clear"); onClicked: { if (frame.controller.service) frame.controller.service.clear(); frame.focusInput() } }
                         NativeIconButton {
                             objectName: "translateSubmit"
@@ -171,7 +171,7 @@ Ui.BorderSurface {
                         ScrollBar.vertical: NativeScrollBar {}
                         ColumnLayout {
                             id: results
-                            width: parent.width; spacing: Style.spacing.md
+                            width: parent.width; spacing: Commons.Style.spacing.md
                             Repeater {
                                 id: resultRepeater
                                 model: frame.controller.service ? frame.controller.service.cards : []

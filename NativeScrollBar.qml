@@ -1,17 +1,17 @@
 import QtQuick
 import QtQuick.Controls
-import qs.Commons
+import qs.Commons as Commons
 
 ScrollBar {
     id: root
-    padding: Style.spacing.xxs
+    padding: Commons.Style.spacing.xxs
     minimumSize: 0.08
-    readonly property color handleColor: pressed ? Color.accent : hovered ? Color.popups.text : Color.muted
+    readonly property color handleColor: pressed ? Commons.Color.accent : hovered ? Commons.Color.popups.text : Commons.Color.muted
     background: null
     contentItem: Rectangle {
-        implicitWidth: Style.space(6)
-        implicitHeight: Style.space(6)
-        radius: Style.cornerRadius
+        implicitWidth: Commons.Style.space(6)
+        implicitHeight: Commons.Style.space(6)
+        radius: Commons.Style.cornerRadius
         color: root.handleColor
         opacity: root.active || root.hovered || root.pressed ? 1 : 0
     }

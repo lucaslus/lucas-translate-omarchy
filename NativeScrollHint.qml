@@ -1,5 +1,5 @@
 import QtQuick
-import qs.Commons
+import qs.Commons as Commons
 
 Item {
     id: root
@@ -7,15 +7,15 @@ Item {
     required property Flickable viewport
     property string label: ""
     readonly property bool moreBelow: viewport.height > 0
-        && viewport.contentHeight - viewport.height - viewport.contentY > Style.space(1)
+        && viewport.contentHeight - viewport.height - viewport.contentY > Commons.Style.space(1)
     visible: moreBelow
-    height: Math.min(Style.space(44), viewport.height)
+    height: Math.min(Commons.Style.space(44), viewport.height)
 
     Rectangle {
         anchors.fill: parent
         gradient: Gradient {
-            GradientStop { position: 0; color: Qt.rgba(Color.popups.background.r, Color.popups.background.g, Color.popups.background.b, 0) }
-            GradientStop { position: 0.7; color: Color.popups.background }
+            GradientStop { position: 0; color: Qt.rgba(Commons.Color.popups.background.r, Commons.Color.popups.background.g, Commons.Color.popups.background.b, 0) }
+            GradientStop { position: 0.7; color: Commons.Color.popups.background }
         }
     }
     NativeIconButton {

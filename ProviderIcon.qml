@@ -1,5 +1,5 @@
 import QtQuick
-import qs.Commons
+import qs.Commons as Commons
 import "Model.js" as Model
 
 Item {
@@ -12,7 +12,7 @@ Item {
         if (brand === "google") return Qt.rect(2, 2, 60, 60)
         return Qt.rect(4, 40, 40, 44)
     }
-    implicitWidth: Style.space(18)
+    implicitWidth: Commons.Style.space(18)
     implicitHeight: implicitWidth
     visible: brand !== ""
     Image {

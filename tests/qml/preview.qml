@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Window
 import Quickshell
-import qs.Commons
+import qs.Commons as Commons
 import "Native" as Native
 
 ShellRoot {
@@ -17,7 +17,7 @@ ShellRoot {
         function capture(action) {}
     }
     property Native.PanelContent panel: Native.PanelContent { controller: root.controller }
-    property Window window: Window { width: 600; height: 780; visible: true; color: Color.background }
+    property Window window: Window { width: 600; height: 780; visible: true; color: Commons.Color.background }
     Component.onCompleted: {
         service.settings = {preferences:{language:"zh-CN"},services:{youdao:true,bing:true,google:true,deepl:true},
             ai:{enabled:false,base_url:"http://localhost:11434/v1",model:"",has_api_key:false},
@@ -44,8 +44,8 @@ ShellRoot {
         onTriggered: {
             // Apply after the asynchronous theme FileViews have loaded.
             if (Quickshell.env("NATIVE_PREVIEW_THEME") === "light") {
-                Color.loadColors('mode = "light"\nforeground = "#222222"\nbackground = "#fafafa"\nmuted = "#e4e4e4"\naccent = "#2277cc"')
-                Color.loadShell('[popups]\ntext = "#222222"\nbackground = "#fafafa"\nborder = "#2277cc"')
+                Commons.Color.loadColors('mode = "light"\nforeground = "#222222"\nbackground = "#fafafa"\nmuted = "#e4e4e4"\naccent = "#2277cc"')
+                Commons.Color.loadShell('[popups]\ntext = "#222222"\nbackground = "#fafafa"\nborder = "#2277cc"')
             }
             Qt.callLater(function() { root.panel.grabToImage(function(result) {
             var suffix = Quickshell.env("NATIVE_PREVIEW_THEME") === "light" ? "-light" : ""

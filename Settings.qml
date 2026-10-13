@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import qs.Commons
+import qs.Commons as Commons
 import "Strings.js" as Strings
 import "Theme.js" as Theme
 import "Model.js" as Model
@@ -104,7 +104,7 @@ Flickable {
 
     ColumnLayout {
         id: column
-        width: root.width; spacing: Style.spacing.md
+        width: root.width; spacing: Commons.Style.spacing.md
         NativeDropdown {
             objectName: "interfaceLanguage"
             Layout.fillWidth: true; label: root.tr("language")
@@ -112,20 +112,20 @@ Flickable {
             options: [{value:"auto",label:root.tr("system")},{value:"en",label:"English"},{value:"zh-CN",label:"简体中文"}]
             onChanged: function(value) { root.service.save("preferences.save", {language:value}) }
         }
-        NativeSectionHeader { color: Theme.secondary(Color.muted, Color.popups.text, Color.popups.background); text: root.tr("services"); Layout.fillWidth: true }
+        NativeSectionHeader { color: Theme.secondary(Commons.Color.muted, Commons.Color.popups.text, Commons.Color.popups.background); text: root.tr("services"); Layout.fillWidth: true }
         ServiceList {
             service: root.service; viewport: root; enabledFor: root.providerEnabled
             Layout.fillWidth: true; enabled: !root.saving && !!root.service && root.service.ready
             onToggled: function(provider) { root.toggleProvider(provider) }
         }
-        NativeSectionHeader { color: Theme.secondary(Color.muted, Color.popups.text, Color.popups.background); text: root.tr("routing"); Layout.fillWidth: true }
+        NativeSectionHeader { color: Theme.secondary(Commons.Color.muted, Commons.Color.popups.text, Commons.Color.popups.background); text: root.tr("routing"); Layout.fillWidth: true }
         Repeater {
             model: root.routingRules
             ColumnLayout {
                 id: route
                 required property var modelData
                 required property int index
-                Layout.fillWidth: true; spacing: Style.spacing.xs
+                Layout.fillWidth: true; spacing: Commons.Style.spacing.xs
                 RowLayout {
                     Layout.fillWidth: true
                     NativeDropdown {
@@ -142,19 +142,19 @@ Flickable {
                 }
                 RowLayout {
                     Layout.fillWidth: true
-                    NativeButton { foreground: Color.popups.text; objectName: "rule.up." + route.index; text: root.tr("moveUp"); focusable: true; enabled: route.index > 0; onClicked: root.moveRule(route.index,-1) }
-                    NativeButton { foreground: Color.popups.text; objectName: "rule.down." + route.index; text: root.tr("moveDown"); focusable: true; enabled: route.index < root.routingRules.length-1; onClicked: root.moveRule(route.index,1) }
+                    NativeButton { foreground: Commons.Color.popups.text; objectName: "rule.up." + route.index; text: root.tr("moveUp"); focusable: true; enabled: route.index > 0; onClicked: root.moveRule(route.index,-1) }
+                    NativeButton { foreground: Commons.Color.popups.text; objectName: "rule.down." + route.index; text: root.tr("moveDown"); focusable: true; enabled: route.index < root.routingRules.length-1; onClicked: root.moveRule(route.index,1) }
                     Item { Layout.fillWidth: true }
-                    NativeButton { foreground: Color.popups.text; objectName: "rule.remove." + route.index; text: root.tr("remove"); focusable: true; onClicked: root.removeRule(route.index) }
+                    NativeButton { foreground: Commons.Color.popups.text; objectName: "rule.remove." + route.index; text: root.tr("remove"); focusable: true; onClicked: root.removeRule(route.index) }
                 }
             }
         }
-        NativeButton { foreground: Color.popups.text; objectName: "rule.add"; text: root.tr("addRule"); focusable: true; enabled: root.routingRules.length < root.languages.length; onClicked: root.addRule() }
+        NativeButton { foreground: Commons.Color.popups.text; objectName: "rule.add"; text: root.tr("addRule"); focusable: true; enabled: root.routingRules.length < root.languages.length; onClicked: root.addRule() }
         NativeDropdown {
             label: root.tr("fallback"); Layout.fillWidth: true; options: root.languages; value: root.routingFallback
             onChanged: function(value) { root.routingDirty = true; root.routingFallback = value }
         }
-        NativeButton { foreground: Color.popups.text;
+        NativeButton { foreground: Commons.Color.popups.text;
             objectName: "rule.save"
             text: root.tr("save"); focusable: true; enabled: !root.saving
             onClicked: {
@@ -165,10 +165,10 @@ Flickable {
                 })
             }
         }
-        NativeSectionHeader { text: root.tr("ai"); visible: root.aiChecked; color: Theme.secondary(Color.muted,Color.popups.text,Color.popups.background); Layout.fillWidth: true }
+        NativeSectionHeader { text: root.tr("ai"); visible: root.aiChecked; color: Theme.secondary(Commons.Color.muted,Commons.Color.popups.text,Commons.Color.popups.background); Layout.fillWidth: true }
         ColumnLayout {
             objectName: "ai.form"
-            visible: root.aiChecked; Layout.fillWidth: true; spacing: Style.spacing.md
+            visible: root.aiChecked; Layout.fillWidth: true; spacing: Commons.Style.spacing.md
             NativeText { text: root.tr("endpoint"); Layout.fillWidth: true }
             NativeField { id: endpoint; objectName: "ai.endpoint"; Layout.fillWidth: true; text: root.aiEndpoint; placeholderText: "https://…/v1"; onTextEdited: { root.aiDirty = true; root.aiEndpoint = text } }
             NativeText { text: root.tr("model"); Layout.fillWidth: true }
@@ -176,7 +176,7 @@ Flickable {
             NativeText { text: root.tr("apiKey"); Layout.fillWidth: true }
             NativeField { id: aiKey; objectName: "ai.key"; Layout.fillWidth: true; password: true; placeholderText: root.tr(root.document.ai && root.document.ai.has_api_key ? "keyStored" : "keyEmpty") }
             NativeToggle { visible: !!root.document.ai && root.document.ai.has_api_key === true; label: root.tr("deleteKey"); Layout.fillWidth: true; checked: root.clearAiKey; onClicked: root.clearAiKey = !root.clearAiKey }
-            NativeButton { foreground: Color.popups.text;
+            NativeButton { foreground: Commons.Color.popups.text;
                 objectName: "ai.save"
                 text: root.tr("save"); focusable: true; enabled: !root.saving
                 onClicked: {
@@ -188,15 +188,15 @@ Flickable {
                 }
             }
         }
-        NativeSectionHeader { text: root.tr("official"); visible: root.officialChecked; color: Theme.secondary(Color.muted,Color.popups.text,Color.popups.background); Layout.fillWidth: true }
+        NativeSectionHeader { text: root.tr("official"); visible: root.officialChecked; color: Theme.secondary(Commons.Color.muted,Commons.Color.popups.text,Commons.Color.popups.background); Layout.fillWidth: true }
         ColumnLayout {
             objectName: "official.form"
-            visible: root.officialChecked; Layout.fillWidth: true; spacing: Style.spacing.md
+            visible: root.officialChecked; Layout.fillWidth: true; spacing: Commons.Style.spacing.md
             NativeToggle { id: pro; objectName: "official.pro"; label: root.tr("pro"); Layout.fillWidth: true; checked: root.document.official ? root.document.official.pro === true : false; onClicked: { root.officialDirty = true; checked = !checked } }
             NativeText { text: root.tr("apiKey"); Layout.fillWidth: true }
             NativeField { id: officialKey; objectName: "official.key"; Layout.fillWidth: true; password: true; placeholderText: root.tr(root.document.official && root.document.official.has_api_key ? "keyStored" : "apiKey"); onTextEdited: root.officialDirty = true }
             NativeToggle { visible: !!root.document.official && root.document.official.has_api_key === true; label: root.tr("deleteKey"); Layout.fillWidth: true; checked: root.clearOfficialKey; onClicked: { root.officialDirty = true; root.clearOfficialKey = !root.clearOfficialKey } }
-            NativeButton { foreground: Color.popups.text;
+            NativeButton { foreground: Commons.Color.popups.text;
                 objectName: "official.save"
                 text: root.tr("save"); focusable: true; enabled: !root.saving
                 onClicked: {
@@ -207,7 +207,7 @@ Flickable {
                     })
                 }
             }
-            NativeButton { foreground: Color.popups.text;
+            NativeButton { foreground: Commons.Color.popups.text;
                 objectName: "official.test"
                 text: root.tr("testConnection"); focusable: true
                 enabled: !root.saving && !root.officialDirty && !!root.document.official && root.document.official.has_api_key === true
@@ -220,14 +220,14 @@ Flickable {
                 }
             }
         }
-        NativeSectionHeader { color: Theme.secondary(Color.muted, Color.popups.text, Color.popups.background); text: root.tr("shortcuts"); Layout.fillWidth: true }
+        NativeSectionHeader { color: Theme.secondary(Commons.Color.muted, Commons.Color.popups.text, Commons.Color.popups.background); text: root.tr("shortcuts"); Layout.fillWidth: true }
         Repeater {
             model: [{id:"input",label:"inputAction"},{id:"toggle",label:"toggle"},{id:"selection",label:"selection"},
                 {id:"screenshot",label:"screenshot"},{id:"ocr",label:"ocr"},{id:"annotate",label:"annotate"}]
             ColumnLayout {
                 id: shortcut
                 required property var modelData
-                Layout.fillWidth: true; spacing: Style.spacing.xs
+                Layout.fillWidth: true; spacing: Commons.Style.spacing.xs
                 NativeText { text: root.tr(shortcut.modelData.label); Layout.fillWidth: true }
                 NativeField {
                     objectName: "shortcut." + shortcut.modelData.id
@@ -237,11 +237,11 @@ Flickable {
                 }
                 NativeText {
                     text: root.service && root.service.shortcuts.conflicts ? root.service.shortcuts.conflicts[shortcut.modelData.id] || "" : ""
-                    visible: !!text; color: Color.urgent; Layout.fillWidth: true
+                    visible: !!text; color: Commons.Color.urgent; Layout.fillWidth: true
                 }
             }
         }
-        NativeButton { foreground: Color.popups.text;
+        NativeButton { foreground: Commons.Color.popups.text;
             objectName: "shortcut.save"
             text: root.tr("save"); focusable: true; enabled: !root.saving
             onClicked: {
@@ -252,7 +252,7 @@ Flickable {
                 })
             }
         }
-        NativeSectionHeader { text: root.tr("usage"); color: Theme.secondary(Color.muted,Color.popups.text,Color.popups.background); Layout.fillWidth: true }
+        NativeSectionHeader { text: root.tr("usage"); color: Theme.secondary(Commons.Color.muted,Commons.Color.popups.text,Commons.Color.popups.background); Layout.fillWidth: true }
         NativeToggle { objectName: "usage.history"; label: root.tr("historyStorage"); checked: root.usageDraft.history_enabled; Layout.fillWidth: true; onClicked: root.changeUsage("history_enabled",!checked) }
         NativeDropdown { objectName: "usage.days"; label: root.tr("historyDays"); Layout.fillWidth: true; value: String(root.usageDraft.history_days); options: [{value:"0",label:root.tr("unlimited")},{value:"7",label:"7 d"},{value:"30",label:"30 d"},{value:"90",label:"90 d"},{value:"365",label:"365 d"}]; onChanged: function(value) { root.changeUsage("history_days",Number(value)) } }
         NativeDropdown { objectName: "usage.limit"; label: root.tr("historyLimit"); Layout.fillWidth: true; value: String(root.usageDraft.history_limit); options: [{value:"0",label:root.tr("unlimited")},{value:"100",label:"100"},{value:"1000",label:"1000"},{value:"10000",label:"10000"}]; onChanged: function(value) { root.changeUsage("history_limit",Number(value)) } }
@@ -264,17 +264,17 @@ Flickable {
                 root.service.save("usage.save",Object.assign({},root.usageDraft,{service_order:root.service.serviceOrder.slice()}),function(ok) { root.saving=false; if (ok) { root.usageDirty=false; root.loadUsage() } })
             }
         }
-        NativeSectionHeader { color: Theme.secondary(Color.muted, Color.popups.text, Color.popups.background); text: root.tr("about"); Layout.fillWidth: true }
+        NativeSectionHeader { color: Theme.secondary(Commons.Color.muted, Commons.Color.popups.text, Commons.Color.popups.background); text: root.tr("about"); Layout.fillWidth: true }
         NativeText { text: "Lucas Translate · " + (root.service && root.service.manifest ? root.service.manifest.version : "0.1.0") + " · MIT"; Layout.fillWidth: true }
-        NativeSectionHeader { color: Theme.secondary(Color.muted, Color.popups.text, Color.popups.background); text: root.tr("diagnostics"); Layout.fillWidth: true }
+        NativeSectionHeader { color: Theme.secondary(Commons.Color.muted, Commons.Color.popups.text, Commons.Color.popups.background); text: root.tr("diagnostics"); Layout.fillWidth: true }
         NativeText {
             visible: !!root.logStatus; Layout.fillWidth: true
             text: root.logStatus ? root.tr(root.logStatus.available && !root.logStatus.write_failed ? "logsReady" : "logsFailed")
                 + (root.logStatus.dropped_events ? " · " + root.tr("logsDropped") + ": " + root.logStatus.dropped_events : "") : ""
             secondary: true
-            color: root.logStatus && root.logStatus.available && !root.logStatus.write_failed ? Theme.secondary(Color.muted, Color.popups.text, Color.popups.background) : Color.urgent
+            color: root.logStatus && root.logStatus.available && !root.logStatus.write_failed ? Theme.secondary(Commons.Color.muted, Commons.Color.popups.text, Commons.Color.popups.background) : Commons.Color.urgent
         }
-        NativeButton { foreground: Color.popups.text;
+        NativeButton { foreground: Commons.Color.popups.text;
             text: root.tr("openLogs"); focusable: true; enabled: !!root.service && root.service.ready
             onClicked: root.service.request("logs.directory", {}, function(ok, directory) {
                 if (ok) Qt.openUrlExternally("file://" + directory)

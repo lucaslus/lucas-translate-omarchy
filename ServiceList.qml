@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import qs.Commons
+import qs.Commons as Commons
 import "Model.js" as Model
 
 Item {
@@ -11,8 +11,8 @@ Item {
     property var viewport: null
     property string dragging: ""
     property real dragY: 0
-    readonly property real rowHeight: Style.spacing.controlHeight + Style.spacing.md
-    readonly property real rowSpacing: Style.spacing.xs
+    readonly property real rowHeight: Commons.Style.spacing.controlHeight + Commons.Style.spacing.md
+    readonly property real rowSpacing: Commons.Style.spacing.xs
     readonly property real stride: rowHeight + rowSpacing
     implicitHeight: Math.max(0,providers.count * stride - rowSpacing)
     signal toggled(string provider)
@@ -68,9 +68,9 @@ Item {
                 width: root.width; height: root.rowHeight
                 opacity: root.dragging===providerId ? 0.25 : 1
                 RowLayout {
-                    anchors.fill: parent; spacing: Style.spacing.sm
+                    anchors.fill: parent; spacing: Commons.Style.spacing.sm
                     Item {
-                        Layout.preferredWidth: Style.space(18); Layout.fillHeight: true
+                        Layout.preferredWidth: Commons.Style.space(18); Layout.fillHeight: true
                         ProviderIcon { anchors.centerIn: parent; provider: row.providerId }
                         NativeIcon { anchors.centerIn: parent; visible: row.providerId==="AI"; name: "ai" }
                     }
@@ -114,12 +114,12 @@ Item {
     Rectangle {
         visible: !!root.dragging
         y: root.dragY; width: root.width; height: root.rowHeight; z: 2
-        radius: Style.cornerRadius; color: Color.popups.background
-        border.width: Style.normalBorderWidth; border.color: Color.accent
+        radius: Commons.Style.cornerRadius; color: Commons.Color.popups.background
+        border.width: Commons.Style.normalBorderWidth; border.color: Commons.Color.accent
         RowLayout {
-            anchors.fill: parent; anchors.margins: Style.spacing.xs; spacing: Style.spacing.sm
+            anchors.fill: parent; anchors.margins: Commons.Style.spacing.xs; spacing: Commons.Style.spacing.sm
             Item {
-                Layout.preferredWidth: Style.space(18); Layout.fillHeight: true
+                Layout.preferredWidth: Commons.Style.space(18); Layout.fillHeight: true
                 ProviderIcon { anchors.centerIn: parent; provider: root.dragging }
                 NativeIcon { anchors.centerIn: parent; visible: root.dragging==="AI"; name: "ai" }
             }
@@ -131,7 +131,7 @@ Item {
         interval: 16; repeat: true; running: !!root.dragging && !!root.viewport
         onTriggered: {
             var y=root.mapToItem(root.viewport,0,root.dragY+root.rowHeight/2).y
-            var step=y<Style.space(32) ? -Style.space(6) : y>root.viewport.height-Style.space(32) ? Style.space(6) : 0
+            var step=y<Commons.Style.space(32) ? -Commons.Style.space(6) : y>root.viewport.height-Commons.Style.space(32) ? Commons.Style.space(6) : 0
             var before=root.viewport.contentY
             root.viewport.contentY=Math.max(0,Math.min(root.viewport.contentHeight-root.viewport.height,before+step))
             if (root.viewport.contentY!==before) root.moveDrag(root.dragY+root.rowHeight/2+root.viewport.contentY-before)

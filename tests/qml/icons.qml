@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Window
 import Quickshell
-import qs.Commons
+import qs.Commons as Commons
 import "Native" as Native
 
 ShellRoot {
@@ -16,7 +16,7 @@ ShellRoot {
                 Native.NativeIcon {
                     required property string modelData
                     name: modelData
-                    width: Style.font.icon + Style.space(2); height: width
+                    width: Commons.Style.font.icon + Commons.Style.space(2); height: width
                 }
             }
         }

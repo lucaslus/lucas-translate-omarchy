@@ -1,12 +1,12 @@
 import QtQuick
-import qs.Commons
+import qs.Commons as Commons
 
 Item {
     id: root
     property string label: ""
-    property color foreground: Color.popups.text
+    property color foreground: Commons.Color.popups.text
     readonly property bool running: visible
-    implicitWidth: Style.font.icon
+    implicitWidth: Commons.Style.font.icon
     implicitHeight: implicitWidth
     Accessible.name: label
 

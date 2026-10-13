@@ -1,12 +1,12 @@
 import QtQuick
-import qs.Commons
+import qs.Commons as Commons
 
 Canvas {
     id: root
     property string name: ""
     property bool filled: false
-    property color foreground: Color.popups.text
-    implicitWidth: Style.font.icon
+    property color foreground: Commons.Color.popups.text
+    implicitWidth: Commons.Style.font.icon
     implicitHeight: implicitWidth
     onNameChanged: requestPaint()
     onFilledChanged: requestPaint()

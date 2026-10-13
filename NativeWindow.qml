@@ -2,7 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
-import qs.Commons
+import qs.Commons as Commons
 
 PanelWindow {
     id: window
@@ -20,13 +20,13 @@ PanelWindow {
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
     onVisibleChanged: if (visible) Qt.callLater(function() { if (controller.page === "translate") frame.focusInput() })
 
-    Rectangle { anchors.fill: parent; color: Color.menu.scrim }
+    Rectangle { anchors.fill: parent; color: Commons.Color.menu.scrim }
     MouseArea { anchors.fill: parent; onClicked: window.controller.dismiss() }
     PanelContent {
         id: frame
         controller: window.controller
         anchors.centerIn: parent
-        width: Math.min(Style.space(440), window.width - Style.gapsOut * 2)
-        height: Math.min(frame.preferredHeight, window.height - Style.gapsOut * 2)
+        width: Math.min(Commons.Style.space(440), window.width - Commons.Style.gapsOut * 2)
+        height: Math.min(frame.preferredHeight, window.height - Commons.Style.gapsOut * 2)
     }
 }

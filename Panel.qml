@@ -1,6 +1,6 @@
 import QtQuick
 import Quickshell
-import qs.Commons
+import qs.Commons as Commons
 import "Strings.js" as Strings
 import "BuildInfo.js" as BuildInfo
 

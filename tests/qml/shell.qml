@@ -1,6 +1,6 @@
 import QtQuick
 import Quickshell
-import qs.Commons
+import qs.Commons as Commons
 import "../../" as Native
 
 ShellRoot {
@@ -62,15 +62,15 @@ ShellRoot {
                 root.service.accept(JSON.stringify({event:"translation",data:{request_id:"active",kind:"start",data:{services:["YoudaoDict","Bing"]}}}))
                 root.service.accept(JSON.stringify({event:"translation",data:{request_id:"active",kind:"result",data:{service:"YoudaoDict",paragraphs:["retained"]}}}))
                 root.check(root.service.cards[0].paragraphs[0] === "retained", "Result missing")
-                Color.loadColors('foreground = "#eeeeee"\nbackground = "#111111"\naccent = "#cc8844"')
-                Color.loadShell('[font]\nbase-size = 16\n[popups]\ntext = "#eeeeee"\nbackground = "#111111"')
+                Commons.Color.loadColors('foreground = "#eeeeee"\nbackground = "#111111"\naccent = "#cc8844"')
+                Commons.Color.loadShell('[font]\nbase-size = 16\n[popups]\ntext = "#eeeeee"\nbackground = "#111111"')
                 root.check(text.color.toString() === "#eeeeee", "Text does not follow dark palette")
-                Color.loadColors('foreground = "#222222"\nbackground = "#fafafa"\naccent = "#4488cc"')
-                Color.loadShell('[font]\nbase-size = 12\n[popups]\ntext = "#222222"\nbackground = "#fafafa"')
+                Commons.Color.loadColors('foreground = "#222222"\nbackground = "#fafafa"\naccent = "#4488cc"')
+                Commons.Color.loadShell('[font]\nbase-size = 12\n[popups]\ntext = "#222222"\nbackground = "#fafafa"')
                 root.check(text.color.toString() === "#222222", "Text does not follow light palette")
                 root.check(area.color.toString() === "#222222", "Input does not follow theme")
-                root.check(scrollbar.handleColor.toString() === Color.muted.toString(), "Scrollbar does not follow theme")
-                root.check(text.font.pixelSize === Style.font.body, "Typography not bound to Shell")
+                root.check(scrollbar.handleColor.toString() === Commons.Color.muted.toString(), "Scrollbar does not follow theme")
+                root.check(text.font.pixelSize === Commons.Style.font.body, "Typography not bound to Shell")
                 root.check(area.text === root.service.text, "Theme change lost input")
                 root.check(root.service.cards[0].paragraphs[0] === "retained", "Theme change lost result")
                 root.check(root.service.busy, "Theme change interrupted request")

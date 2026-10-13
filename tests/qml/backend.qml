@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Window
 import QtTest
 import Quickshell
-import qs.Commons
+import qs.Commons as Commons
 import "Native" as Native
 
 ShellRoot {

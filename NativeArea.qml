@@ -1,13 +1,13 @@
 import QtQuick
 import QtQuick.Controls
-import qs.Commons
+import qs.Commons as Commons
 import qs.Ui as Ui
 import "Theme.js" as Theme
 import "Typography.js" as Typography
 
 TextArea {
     id: root
-    implicitWidth: Style.spacing.dropdownWidth
+    implicitWidth: Commons.Style.spacing.dropdownWidth
     Keys.priority: Keys.BeforeItem
     activeFocusOnTab: true
     function submits(event) {
@@ -15,19 +15,19 @@ TextArea {
             && !(event.modifiers & Qt.ShiftModifier) && !inputMethodComposing
     }
     textFormat: TextEdit.PlainText
-    color: Color.popups.text
+    color: Commons.Color.popups.text
     font.family: Typography.family
-    font.pixelSize: Style.font.body
+    font.pixelSize: Commons.Style.font.body
     wrapMode: TextEdit.Wrap
     selectByMouse: true
-    selectionColor: Style.selectionFillFor(Color.popups.text, Color.accent)
-    selectedTextColor: Color.popups.text
-    placeholderTextColor: Theme.secondary(Color.muted, Color.popups.text,
-        Theme.over(Style.controlFill(root.activeFocus, root.hovered, Color.popups.text, Color.accent), Color.popups.background))
-    padding: Style.spacing.controlPaddingX + Style.normalBorderWidth
+    selectionColor: Commons.Style.selectionFillFor(Commons.Color.popups.text, Commons.Color.accent)
+    selectedTextColor: Commons.Color.popups.text
+    placeholderTextColor: Theme.secondary(Commons.Color.muted, Commons.Color.popups.text,
+        Theme.over(Commons.Style.controlFill(root.activeFocus, root.hovered, Commons.Color.popups.text, Commons.Color.accent), Commons.Color.popups.background))
+    padding: Commons.Style.spacing.controlPaddingX + Commons.Style.normalBorderWidth
     background: Ui.BorderSurface {
-        color: Style.controlFill(root.activeFocus, root.hovered, Color.popups.text, Color.accent)
-        radius: Style.cornerRadius
-        borderSpec: Border.controlSpec(root.activeFocus ? "focus" : (root.hovered ? "hover-cursor" : "normal"), Color.popups.text, Color.accent)
+        color: Commons.Style.controlFill(root.activeFocus, root.hovered, Commons.Color.popups.text, Commons.Color.accent)
+        radius: Commons.Style.cornerRadius
+        borderSpec: Commons.Border.controlSpec(root.activeFocus ? "focus" : (root.hovered ? "hover-cursor" : "normal"), Commons.Color.popups.text, Commons.Color.accent)
     }
 }
