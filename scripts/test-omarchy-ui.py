@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+from plugin_files import copy_plugin
 import struct
 import subprocess
 import tempfile
@@ -28,17 +29,17 @@ def main():
         scratch = Path(directory)
         config = scratch / 'config'
         config.mkdir()
-        shutil.copytree(ROOT / 'omarchy',config / 'Native',ignore=shutil.ignore_patterns('__pycache__'))
+        copy_plugin(ROOT,config / 'Native')
         for module in ['Commons','Ui']:
             (config / module).symlink_to(SHELL / module,target_is_directory=True)
-        (config / 'shell.qml').write_text((ROOT / 'omarchy/tests/qml/ui.qml').read_text())
+        (config / 'shell.qml').write_text((ROOT / 'tests/qml/ui.qml').read_text())
         home = scratch / 'home'; home.mkdir()
         image = scratch / 'fixture.png'; png(image)
         exported = scratch / 'annotated.png'
         environment = dict(os.environ,HOME=str(home),XDG_CONFIG_HOME=str(home / '.config'),
             XDG_DATA_HOME=str(home / '.local/share'),XDG_STATE_HOME=str(home / '.local/state'),
             QT_QPA_PLATFORM='offscreen',QSG_RHI_BACKEND='opengl',LIBGL_ALWAYS_SOFTWARE='1',
-            NATIVE_UI_BACKEND_FIXTURE=str(ROOT / 'omarchy/tests/mock_ui_backend.py'),
+            NATIVE_UI_BACKEND_FIXTURE=str(ROOT / 'tests/mock_ui_backend.py'),
             NATIVE_TEST_IMAGE=str(image),NATIVE_TEST_OUTPUT=str(exported))
         environment.pop('QT_QUICK_BACKEND',None)
         started = time.monotonic()

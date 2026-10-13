@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+from plugin_files import copy_plugin
 import subprocess
 import struct
 import tempfile
@@ -15,7 +16,7 @@ import zlib
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0,str(ROOT/'omarchy/tests'))
+sys.path.insert(0,str(ROOT/'tests'))
 import selection_tools
 BINARY = Path(os.environ.get('LUCAS_NATIVE_BACKEND',ROOT / 'crates/lucas-omarchy/target/debug/lucas-translate-omarchy-backend'))
 
@@ -43,11 +44,11 @@ def main():
     try:
         with tempfile.TemporaryDirectory(prefix='lucas-native-rust-bridge-') as directory:
             scratch=Path(directory); config=scratch / 'config'; config.mkdir()
-            shutil.copytree(ROOT / 'omarchy',config / 'Native',ignore=shutil.ignore_patterns('__pycache__'))
+            copy_plugin(ROOT,config / 'Native')
             shell=Path(os.environ.get('OMARCHY_PATH','/usr/share/omarchy')) / 'shell'
             for module in ['Commons','Ui']:
                 (config / module).symlink_to(shell / module,target_is_directory=True)
-            (config / 'shell.qml').write_text((ROOT / 'omarchy/tests/qml/backend.qml').read_text())
+            (config / 'shell.qml').write_text((ROOT / 'tests/qml/backend.qml').read_text())
             home=scratch / 'home'; data=home / '.local/share/lucas-translate-omarchy'; data.mkdir(parents=True)
             (data / 'config.json').write_text(json.dumps({'enabled':True,'base_url':f'http://127.0.0.1:{server.server_port}/v1',
                 'model':'bridge-test','preferences':{'language':'en'},

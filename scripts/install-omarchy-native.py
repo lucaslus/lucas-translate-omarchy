@@ -10,6 +10,8 @@ import subprocess
 import tempfile
 import time
 
+from plugin_files import copy_plugin
+
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_ID = 'lucas.translate'
 
@@ -146,7 +148,7 @@ def install(binary, config, target, destination, desktop, without_shortcuts):
     require_unlocked()
     with tempfile.TemporaryDirectory(prefix='lucas-native-install-', dir=target.parent.parent) as directory:
         staging = Path(directory) / PLUGIN_ID
-        shutil.copytree(ROOT / 'omarchy', staging, ignore=shutil.ignore_patterns('tests', '__pycache__', '*.pyc'))
+        copy_plugin(ROOT, staging)
         revision = stamp_revision(staging, binary)
         run('omarchy', 'plugin', 'validate', str(staging))
         require_unlocked()
@@ -156,8 +158,8 @@ def install(binary, config, target, destination, desktop, without_shortcuts):
         staging.replace(target)
     # Atomic executable replacement works even while the old inode is running.
     for source, name in [(binary, 'lucas-translate-omarchy-backend'),
-                         (ROOT / 'omarchy/scripts/launch.sh', 'lucas-translate-native'),
-                         (ROOT / 'omarchy/scripts/dispatch.sh', 'lucas-translate')]:
+                         (ROOT / 'scripts/launch.sh', 'lucas-translate-native'),
+                         (ROOT / 'scripts/dispatch.sh', 'lucas-translate')]:
         temp = destination / (name + '.installing')
         shutil.copy2(source, temp)
         temp.chmod(0o755)

@@ -1,4 +1,12 @@
-# Lucas Translate — native Omarchy plugin
+# Lucas Translate for Omarchy
+
+[![Native checks](https://github.com/lucaslus/lucas-translate-omarchy/actions/workflows/omarchy-native.yml/badge.svg)](https://github.com/lucaslus/lucas-translate-omarchy/actions/workflows/omarchy-native.yml)
+
+**原生划词翻译、词典与本地 OCR，界面跟随 Omarchy 主题。**
+
+独立的 Omarchy 原生仓库，基于 QML / Qt Quick 与 Rust，无 Tauri / WebView。
+macOS、Windows 和普通 Linux 版本请使用 [Lucas Translate 桌面版](https://github.com/lucaslus/luca-translate)。
+迁移范围、历史和共享核心的维护方式见 [Migration notes](docs/MIGRATION.md)。
 
 Omarchy uses QML and Qt Quick inside the existing Omarchy Shell. A separate Rust
 process supplies translation, dictionaries, credentials, history and local OCR.
@@ -48,9 +56,11 @@ It verifies the running panel's revision against a digest of the installed QML,
 scripts and backend. If the Shell retains cached QML after an update, it restarts
 the unlocked Shell once and checks the revision again before reporting success.
 
-From the repository root:
+Clone this standalone repository, then install as your desktop user:
 
 ```sh
+git clone https://github.com/lucaslus/lucas-translate-omarchy.git
+cd lucas-translate-omarchy
 python3 scripts/install-omarchy-native.py
 ```
 
@@ -73,8 +83,8 @@ python3 scripts/install-omarchy-native.py \
 The user desktop entry and `~/.local/bin/lucas-translate` dispatch to the native
 version only in an Omarchy graphical session. Other Linux sessions dispatch to
 the existing system desktop executable, including Hyprland sessions without a
-running Omarchy Shell. The Tauri package and source remain
-available for other platforms; native code does not alter their theme settings.
+running Omarchy Shell. The [desktop repository](https://github.com/lucaslus/luca-translate) retains the
+Tauri package and source for other platforms.
 
 Build a standalone native bundle with `bash scripts/build-omarchy-native.sh`.
 Extract its archive and run
@@ -82,6 +92,13 @@ Extract its archive and run
 from the extracted `lucas-translate-omarchy` directory. The bundle contains the
 plugin, installer and backend; installation does not require the Tauri package
 or a Rust compiler.
+
+Update by rerunning the same installer from a newer checkout or extracted release.
+Do not run it with sudo. For optional screenshot annotation, build the separately
+licensed editor from a source checkout with `bash scripts/build-screenshot-editor.sh` on Linux (Rust,
+Git, `pkg-config`, GTK4, libadwaita and gtk4-layer-shell development packages are required), then
+install `target/screenshot-editor/source/target/release/tensaku` as
+`~/.local/bin/lucas-screenshot-editor`. Translation and OCR do not require it.
 
 ## Usage
 
@@ -170,23 +187,26 @@ rebuilt without changing the Tauri host. Improvements common to both variants
 should subsequently be extracted deliberately rather than changing the desktop
 host as a side effect of native work.
 
-macOS, Windows, ordinary Linux and the existing desktop build/release workflow
-continue to use the existing Tauri UI and Dark/Light logic. Native CI produces
-an independent backend and plugin archive; it does not replace desktop artifacts.
+macOS, Windows and ordinary Linux continue in the separate desktop repository.
+This repository builds only the native backend and plugin archive. The translation
+core is included as a local source snapshot; see [Migration notes](docs/MIGRATION.md)
+for how shared changes are maintained. Tagging `v<version>` runs the native checks
+and creates a draft GitHub release with the Linux archive and SHA-256 checksum.
 
 ## Verification
 
 ```sh
+cargo test --manifest-path crates/lucas-core/Cargo.toml --locked -- --skip network
 cargo test --manifest-path crates/lucas-omarchy/Cargo.toml --locked
 cargo build --manifest-path crates/lucas-omarchy/Cargo.toml --locked
-python3 omarchy/tests/backend_test.py
-python3 -B omarchy/tests/stability_test.py
-python3 omarchy/tests/shortcuts_test.py
-python3 -B omarchy/tests/integration_test.py
+python3 tests/backend_test.py
+python3 -B tests/stability_test.py
+python3 tests/shortcuts_test.py
+python3 -B tests/integration_test.py
 python3 scripts/test-omarchy-native.py
 python3 -B scripts/test-omarchy-ui.py
 python3 -B scripts/test-omarchy-bridge.py
-omarchy plugin validate omarchy
+omarchy plugin validate .
 ```
 
 Backend tests use a local HTTP fixture and fake clipboard/capture tools; they
@@ -197,7 +217,8 @@ preservation of input/results/running requests. CI runs backend, shortcut, compo
 actual controls in an offscreen Mesa window. The bridge runner additionally
 connects the actual QML service to the Rust binary and a localhost provider.
 Capture, OCR and clipboard executables are replaced with isolated fixtures.
-JSON reports and logs are saved under `dist/omarchy/test-results`.
+JSON reports and logs are saved under `dist/omarchy/test-results`. Run the native
+backend and Quickshell checks on Linux; macOS cannot exercise this runtime.
 
 Stability checks exercise malformed transport/provider responses, rate limits,
 overload, cancellation, process shutdown, concurrent configuration writes,

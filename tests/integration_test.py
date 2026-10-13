@@ -4,14 +4,54 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
+import tarfile
 import tempfile
 import unittest
 from unittest.mock import patch
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'scripts'))
 
 
 class Integration(unittest.TestCase):
+    def test_release_bundle_contains_runtime_and_installer_without_checkout(self):
+        from plugin_files import copy_plugin
+        with tempfile.TemporaryDirectory(prefix='lucas-native-bundle-') as directory:
+            scratch = Path(directory)
+            source = scratch / 'source'
+            copy_plugin(ROOT, source)
+            for name in ['build-omarchy-native.sh', 'install-omarchy-native.py', 'plugin_files.py']:
+                (source / 'scripts' / name).write_bytes((ROOT / 'scripts' / name).read_bytes())
+            backend = source / 'crates/lucas-omarchy/target/release/lucas-translate-omarchy-backend'
+            backend.parent.mkdir(parents=True)
+            backend.write_text('#!/bin/sh\nexit 0\n')
+            tools = scratch / 'tools'
+            tools.mkdir()
+            # Packaging is real; compilation and host architecture are isolated fixtures.
+            for name, body in [('cargo', 'exit 0'), ('uname', 'case "$1" in -s) echo Linux;; -m) echo x86_64;; esac')]:
+                path = tools / name
+                path.write_text('#!/bin/sh\n' + body + '\n')
+                path.chmod(0o755)
+            subprocess.run(['bash', str(source / 'scripts/build-omarchy-native.sh')], check=True,
+                           stdout=subprocess.PIPE, text=True,
+                           env=dict(os.environ, PATH=str(tools) + os.pathsep + os.environ['PATH']))
+            version = json.loads((ROOT / 'manifest.json').read_text())['version']
+            archive = source / f'dist/omarchy/lucas-translate-omarchy-{version}-x86_64.tar.gz'
+            with tarfile.open(archive) as bundle:
+                names = {member.name for member in bundle.getmembers()}
+                prefix = 'lucas-translate-omarchy/'
+                for name in ['manifest.json', 'Panel.qml', 'scripts/install-omarchy-native.py',
+                             'scripts/plugin_files.py', 'docs/MIGRATION.md', 'bin/lucas-translate-omarchy-backend']:
+                    self.assertIn(prefix + name, names)
+                for name in ['omarchy', 'crates', 'tests', '.git']:
+                    self.assertFalse(any(path.startswith(prefix + name + '/') for path in names))
+                self.assertTrue(bundle.getmember(prefix + 'bin/lucas-translate-omarchy-backend').mode & 0o111)
+                bundle.extractall(scratch / 'extracted', filter='data')
+            staged = scratch / 'staged'
+            copy_plugin(scratch / 'extracted/lucas-translate-omarchy', staged)
+            self.assertEqual((staged / 'Panel.qml').read_bytes(), (ROOT / 'Panel.qml').read_bytes())
+
     def test_selection_launcher_pins_source_without_window_title(self):
         with tempfile.TemporaryDirectory(prefix='lucas-selection-launch-') as directory:
             tools=Path(directory)
@@ -19,7 +59,7 @@ class Integration(unittest.TestCase):
             hyprctl=tools/'hyprctl';hyprctl.write_text('#!/usr/bin/env python3\nimport json\nprint('+repr(json.dumps(source))+')\n');hyprctl.chmod(0o755)
             shell=tools/'omarchy-shell';shell.write_text('#!/usr/bin/env python3\nimport json,sys\nprint(json.dumps(sys.argv[1:]))\n');shell.chmod(0o755)
             environment=dict(os.environ,PATH=str(tools)+os.pathsep+os.environ['PATH'])
-            result=subprocess.run(['bash',str(ROOT/'omarchy/scripts/launch.sh'),'--selection'],capture_output=True,text=True,env=environment,check=True)
+            result=subprocess.run(['bash',str(ROOT/'scripts/launch.sh'),'--selection'],capture_output=True,text=True,env=environment,check=True)
             arguments=json.loads(result.stdout)
             self.assertEqual(arguments[:3],['shell','summon','lucas.translate'])
             self.assertEqual(json.loads(arguments[3]),{'action':'selection','source':{key:source[key] for key in ['address','pid','class']}})
@@ -89,7 +129,8 @@ class Integration(unittest.TestCase):
                     installer.main()
                     self.assertTrue((target / 'manifest.json').is_file())
                     self.assertEqual((destination / 'lucas-translate-omarchy-backend').read_text(), binary.read_text())
-                    self.assertNotIn('tests', [value.name for value in target.iterdir()])
+                    self.assertTrue({'tests', 'crates', '.git', '.github', 'dist'}.isdisjoint(value.name for value in target.iterdir()))
+                    self.assertEqual({value.name for value in (target / 'scripts').iterdir()}, {'backend.sh', 'dispatch.sh', 'launch.sh', 'shortcuts.py'})
                     backups = list((home / '.local/state/lucas-translate-omarchy/install-backups').iterdir())
                     self.assertEqual(len(backups), 1)
                     self.assertEqual((backups[0] / 'hyprland.lua').read_text(), 'original hyprland.lua')
@@ -152,7 +193,7 @@ class Integration(unittest.TestCase):
                 ('', '', '0', False),
             ]:
                 with self.subTest(hyprland=hyprland, omarchy=omarchy):
-                    result = subprocess.run(['bash', '-c', wrapper, 'test', str(ROOT / 'omarchy/scripts/dispatch.sh'), *arguments],
+                    result = subprocess.run(['bash', '-c', wrapper, 'test', str(ROOT / 'scripts/dispatch.sh'), *arguments],
                         capture_output=True, env=dict(environment, HYPRLAND_INSTANCE_SIGNATURE=hyprland, OMARCHY_PATH=omarchy,
                                                       NATIVE_TEST_SHELL_STATUS=shell_status))
                     if native or desktop:

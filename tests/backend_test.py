@@ -12,7 +12,7 @@ import time
 import unittest
 import selection_tools
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 BINARY = Path(os.environ.get('LUCAS_NATIVE_BACKEND', ROOT / 'crates/lucas-omarchy/target/debug/lucas-translate-omarchy-backend'))
 
 
@@ -75,7 +75,7 @@ class NativeBackend(unittest.TestCase):
         environment = {**os.environ, 'HOME': str(self.home), 'PATH': str(tools) + os.pathsep + os.environ['PATH'], 'DBUS_SESSION_BUS_ADDRESS':'unix:path=/missing-native-test-bus', 'WAYLAND_DISPLAY':'missing-native-test-wayland'}
         for name in ['XDG_DATA_HOME', 'XDG_CONFIG_HOME', 'XDG_STATE_HOME']:
             environment.pop(name, None)
-        self.process = subprocess.Popen([str(BINARY), '--stdio', '--plugin-dir', str(ROOT / 'omarchy')],
+        self.process = subprocess.Popen([str(BINARY), '--stdio', '--plugin-dir', str(ROOT)],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=environment)
         self.messages = queue.Queue()
         def read():

@@ -10,11 +10,11 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-loader = importlib.machinery.SourceFileLoader('integration', str(ROOT / 'packaging/omarchy/lucas-translate-setup-omarchy'))
+loader = importlib.machinery.SourceFileLoader('integration', str(ROOT / 'scripts/shortcuts.py'))
 spec = importlib.util.spec_from_loader(loader.name, loader)
 integration = importlib.util.module_from_spec(spec)
 loader.exec_module(integration)
-TEMPLATE = (ROOT / 'packaging/omarchy/lucas-translate.lua').read_text()
+TEMPLATE = (ROOT / 'shortcuts.lua').read_text()
 
 
 def bind(key, description='Another app', **extra):
