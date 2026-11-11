@@ -14,6 +14,7 @@ from plugin_files import copy_plugin
 
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_ID = 'lucas.translate'
+DESKTOP_ICON = Path('icons/hicolor/256x256/apps/lucas-translate.png')
 
 
 def run(*arguments, **options):
@@ -67,7 +68,11 @@ def verify_revision(expected):
         raise RuntimeError('Shell is still running an outdated native UI; installation rolled back.')
 
 
-def backup(path, destination):
+def backup(path, destination, *, follow_symlinks=True):
+    if not follow_symlinks and path.is_symlink():
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.symlink_to(path.readlink())
+        return
     if not path.exists():
         return
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -82,11 +87,16 @@ def restore(paths, saved):
     # Roll back only files managed by this installer.
     for path, name in paths:
         previous = saved / name
-        if path.is_dir():
+        if path.is_symlink():
+            path.unlink()
+        elif path.is_dir():
             shutil.rmtree(path)
         elif path.exists():
             path.unlink()
-        if previous.exists():
+        if previous.is_symlink():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.symlink_to(previous.readlink())
+        elif previous.exists():
             path.parent.mkdir(parents=True, exist_ok=True)
             if previous.is_dir():
                 shutil.copytree(previous, path)
@@ -117,7 +127,9 @@ def main():
     if not binary.is_file() or not os.access(binary, os.X_OK):
         raise SystemExit(f'Missing backend executable: {binary}')
     config = Path(os.environ.get('XDG_CONFIG_HOME', str(Path.home() / '.config')))
-    data = Path(os.environ.get('XDG_DATA_HOME', str(Path.home() / '.local/share')))
+    data = Path(os.environ.get('XDG_DATA_HOME', ''))
+    if not data.is_absolute():
+        data = Path.home() / '.local/share'
     state = Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state')))
     plugins = config / 'omarchy/plugins'
     target = plugins / PLUGIN_ID
@@ -126,25 +138,26 @@ def main():
     destination = Path.home() / '.local/bin'
     destination.mkdir(parents=True, exist_ok=True)
     desktop = data / 'applications/lucas-translate.desktop'
+    icon = data / DESKTOP_ICON
     # Keep a complete pre-install snapshot, including legacy desktop shortcuts.
     paths = [(target, 'plugin'), (destination / 'lucas-translate-omarchy-backend', 'backend'),
-             (destination / 'lucas-translate-native', 'launcher'), (desktop, 'desktop'),
+             (destination / 'lucas-translate-native', 'launcher'), (desktop, 'desktop'), (icon, 'icon'),
              (destination / 'lucas-translate', 'dispatch'),
              (config / 'omarchy/shell.json', 'shell.json'),
              (config / 'hypr/hyprland.lua', 'hyprland.lua'),
              (config / 'hypr/lucas-translate.lua', 'lucas-translate.lua'),
              (config / 'hypr/lucas-translate-shortcuts.json', 'shortcuts.json')]
     for path, name in paths:
-        backup(path, saved / name)
+        backup(path, saved / name, follow_symlinks=path != icon)
     try:
-        install(binary, config, target, destination, desktop, args.without_shortcuts)
+        install(binary, config, target, destination, desktop, icon, args.without_shortcuts)
     except Exception:
         restore(paths, saved)
         raise
     print(f'Native Omarchy plugin installed. Previous files: {saved}')
 
 
-def install(binary, config, target, destination, desktop, without_shortcuts):
+def install(binary, config, target, destination, desktop, icon, without_shortcuts):
     require_unlocked()
     with tempfile.TemporaryDirectory(prefix='lucas-native-install-', dir=target.parent.parent) as directory:
         staging = Path(directory) / PLUGIN_ID
@@ -164,9 +177,18 @@ def install(binary, config, target, destination, desktop, without_shortcuts):
         shutil.copy2(source, temp)
         temp.chmod(0o755)
         temp.replace(destination / name)
+    icon.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='lucas-icon-', dir=icon.parent) as directory:
+        staged_icon = Path(directory) / icon.name
+        shutil.copy2(ROOT / 'assets' / icon.name, staged_icon)
+        staged_icon.replace(icon)
+    icon_value = icon.stem
+    if icon != Path.home() / '.local/share' / DESKTOP_ICON:
+        # Omarchy's live icon index does not scan a custom XDG_DATA_HOME.
+        icon_value = str(icon).replace('\\', '\\\\').replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
     desktop.parent.mkdir(parents=True, exist_ok=True)
     desktop.write_text('[Desktop Entry]\nType=Application\nName=Lucas Translate\nComment=Native Omarchy translation and local OCR\n'
-                       f'Exec={destination / "lucas-translate"} --show\nIcon=lucas-translate\nTerminal=false\nCategories=Utility;\n')
+                       f'Exec={destination / "lucas-translate"} --show\nIcon={icon_value}\nTerminal=false\nCategories=Utility;\n')
     require_unlocked()
     run('omarchy-shell', 'shell', 'rescanPlugins', capture_output=True)
     deadline = time.monotonic() + 15
