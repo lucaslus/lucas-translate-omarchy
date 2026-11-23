@@ -74,6 +74,7 @@ See [Development guide](DEVELOPMENT.md) for the current source layout.
 | `launcher` | `~/.local/bin/lucas-translate-native` |
 | `dispatch` | `~/.local/bin/lucas-translate` |
 | `desktop` | `~/.local/share/applications/lucas-translate.desktop` |
+| `icon` | `~/.local/share/icons/hicolor/256x256/apps/lucas-translate.png` |
 | `shell.json` | `~/.config/omarchy/shell.json` |
 | `hyprland.lua` | `~/.config/hypr/hyprland.lua` |
 | `lucas-translate.lua` | `~/.config/hypr/lucas-translate.lua` |

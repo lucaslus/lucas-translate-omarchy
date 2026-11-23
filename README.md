@@ -169,3 +169,5 @@ bash scripts/build-omarchy-native.sh
 ## 许可证
 
 本仓库使用 [MIT](LICENSE) 许可证。可选截图编辑器保留独立的 MPL-2.0 许可与补丁声明，见 [editor notices](https://github.com/lucaslus/lucas-translate-omarchy/blob/main/packaging/editor/NOTICE)。
+
+`assets/lucas-translate.png` 复用 Lucas Translate 桌面版的 [256×256 应用图标](https://github.com/lucaslus/luca-translate/blob/5ee993a33fa3104a473136ff01f1a54b9cfe2625/app/src-tauri/icons/128x128%402x.png)，适用同一份 [MIT 许可证](LICENSE)。

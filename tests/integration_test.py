@@ -42,7 +42,7 @@ class Integration(unittest.TestCase):
             with tarfile.open(archive) as bundle:
                 names = {member.name for member in bundle.getmembers()}
                 prefix = 'lucas-translate-omarchy/'
-                for name in ['manifest.json', 'qml/Panel.qml', 'assets/logos/youdao.png',
+                for name in ['manifest.json', 'qml/Panel.qml', 'assets/logos/youdao.png', 'assets/lucas-translate.png',
                              'runtime/backend.sh', 'runtime/shortcuts.lua', 'scripts/install-omarchy-native.py',
                              'scripts/plugin_files.py', 'docs/MIGRATION.md', 'bin/lucas-translate-omarchy-backend']:
                     self.assertIn(prefix + name, names)
@@ -72,19 +72,22 @@ class Integration(unittest.TestCase):
             self.assertEqual(arguments[:3],['shell','summon','lucas.translate'])
             self.assertEqual(json.loads(arguments[3]),{'action':'selection','source':{key:source[key] for key in ['address','pid','class']}})
 
-    def installer_fixture(self, failure=None, initially_installed=True, stale_ui=False, installer_root=ROOT):
+    def installer_fixture(self, failure=None, initially_installed=True, stale_ui=False, installer_root=ROOT,
+                          custom_data=False, linked_icon=False):
         """Run the actual transaction with every Shell/Hyprland command intercepted."""
         spec = importlib.util.spec_from_file_location('native_installer', installer_root / 'scripts/install-omarchy-native.py')
         installer = importlib.util.module_from_spec(spec); spec.loader.exec_module(installer)
         with tempfile.TemporaryDirectory(prefix='lucas-native-install-transaction-') as directory:
             scratch = Path(directory); home = scratch / 'home'; home.mkdir()
             config = home / '.config'; destination = home / '.local/bin'; destination.mkdir(parents=True)
-            desktop = home / '.local/share/applications/lucas-translate.desktop'
+            data = home / ('custom data' if custom_data else '.local/share')
+            desktop = data / 'applications/lucas-translate.desktop'
+            icon = data / 'icons/hicolor/256x256/apps/lucas-translate.png'
             runtime = scratch / 'runtime/shell/Ui'; runtime.mkdir(parents=True); (runtime / 'BorderSurface.qml').write_text('fixture')
             binary = scratch / 'backend'; binary.write_text('#!/bin/sh\nexit 0\n'); binary.chmod(0o755)
             target = config / 'omarchy/plugins/lucas.translate'
             paths = [(target, 'plugin'), (destination / 'lucas-translate-omarchy-backend', 'backend'),
-                     (destination / 'lucas-translate-native', 'launcher'), (desktop, 'desktop'),
+                     (destination / 'lucas-translate-native', 'launcher'), (desktop, 'desktop'), (icon, 'icon'),
                      (destination / 'lucas-translate', 'dispatch'), (config / 'omarchy/shell.json', 'shell.json'),
                      (config / 'hypr/hyprland.lua', 'hyprland.lua'), (config / 'hypr/lucas-translate.lua', 'lucas-translate.lua'),
                      (config / 'hypr/lucas-translate-shortcuts.json', 'shortcuts.json')]
@@ -96,6 +99,10 @@ class Integration(unittest.TestCase):
                         path.parent.mkdir(parents=True, exist_ok=True); path.write_text('original ' + name)
             else:
                 (config / 'hypr').mkdir(parents=True); (config / 'hypr/hyprland.lua').write_text('original hyprland.lua')
+            if linked_icon:
+                original_icon = icon.with_name('custom.png')
+                icon.rename(original_icon)
+                icon.symlink_to(original_icon.name)
             previous = {name: ('old plugin' if name == 'plugin' else path.read_text()) for path, name in paths if path.exists()}
             listed = 0; calls = []; restarted = False
             def run(*arguments, **options):
@@ -124,7 +131,7 @@ class Integration(unittest.TestCase):
                 if arguments[:3] == ('omarchy', 'restart', 'shell'): restarted = True
                 if arguments[:2] == ('hyprctl', 'configerrors'): output = 'invalid config' if failure == 'shortcuts' else ''
                 return subprocess.CompletedProcess(arguments, 0, stdout=output, stderr='')
-            environment = dict(HOME=str(home),XDG_CONFIG_HOME=str(config),XDG_DATA_HOME=str(home / '.local/share'),
+            environment = dict(HOME=str(home),XDG_CONFIG_HOME=str(config),XDG_DATA_HOME=str(data) if custom_data else '',
                                XDG_STATE_HOME=str(home / '.local/state'),OMARCHY_PATH=str(runtime.parents[1]))
             with patch.dict(os.environ, environment), patch.object(installer, 'run', side_effect=run), \
                  patch.object(installer, 'require_unlocked'), patch.object(installer.os, 'geteuid', return_value=1000), \
@@ -138,6 +145,9 @@ class Integration(unittest.TestCase):
                             self.assertEqual((path / 'sentinel').read_text() if name == 'plugin' else path.read_text(), previous[name])
                         else:
                             self.assertFalse(path.exists(), name)
+                    if linked_icon:
+                        self.assertEqual(icon.readlink(), Path(original_icon.name))
+                        self.assertEqual(original_icon.read_text(), 'original icon')
                 else:
                     installer.main()
                     self.assertTrue((target / 'manifest.json').is_file())
@@ -148,11 +158,21 @@ class Integration(unittest.TestCase):
                     backups = list((home / '.local/state/lucas-translate-omarchy/install-backups').iterdir())
                     self.assertEqual(len(backups), 1)
                     self.assertEqual((backups[0] / 'hyprland.lua').read_text(), 'original hyprland.lua')
+                    icon_value = str(icon) if custom_data else 'lucas-translate'
+                    self.assertIn(f'Icon={icon_value}', desktop.read_text().splitlines())
+                    self.assertEqual(icon.read_bytes(), (ROOT / 'assets/lucas-translate.png').read_bytes())
+                    if initially_installed:
+                        self.assertEqual((backups[0] / 'icon').read_text(), 'original icon')
+                    else:
+                        self.assertFalse((backups[0] / 'icon').exists())
                 self.assertTrue(all(str(home) in str(path) for path, _ in paths))
                 self.assertEqual(restarted, stale_ui or failure == 'revision')
 
     def test_installer_success_preserves_backup_and_excludes_fixtures(self):
         self.installer_fixture()
+
+    def test_installer_first_install_uses_custom_xdg_data_home(self):
+        self.installer_fixture(initially_installed=False, custom_data=True)
 
     def test_installer_restarts_shell_when_ready_panel_has_stale_qml(self):
         self.installer_fixture(stale_ui=True)
@@ -181,6 +201,9 @@ class Integration(unittest.TestCase):
 
     def test_installer_rolls_back_first_install_without_leaving_managed_files(self):
         self.installer_fixture('final', initially_installed=False)
+
+    def test_installer_rolls_back_linked_icon_without_writing_through_it(self):
+        self.installer_fixture('final', linked_icon=True)
 
     def test_launcher_dispatch_is_limited_to_omarchy_sessions(self):
         with tempfile.TemporaryDirectory(prefix='lucas-native-dispatch-test-') as directory:
