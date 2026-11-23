@@ -12,7 +12,7 @@ Flickable {
     required property var service
     property var draftShortcuts: ({})
     property bool usageDirty: false
-    property var usageDraft: ({service_order:["YoudaoDict","DeepLApi","AI","Bing","DeepLFree"],history_enabled:true,history_days:0,history_limit:0,ocr_cleanup:false})
+    property var usageDraft: ({service_order:["YoudaoDict","DeepLApi","AI","Bing","DeepLFree"],history_enabled:true,history_days:0,history_limit:0,ocr_cleanup:false,selection_clipboard_auto_translate:false})
     property bool shortcutsDirty: false
     property bool aiDirty: false
     property bool aiSwitchDirty: false
@@ -29,6 +29,8 @@ Flickable {
     property string routingFallback: "zh-Hans"
     property var logStatus: null
     readonly property var document: service ? service.settings : ({})
+    function normalizedUrl(value) { return String(value || "").trim().replace(/\/+$/, "") }
+    readonly property bool aiEndpointChanged: normalizedUrl(aiEndpoint) !== normalizedUrl(document.ai ? document.ai.base_url : "")
     readonly property var languages: Strings.languages(service ? service.language : "en").filter(function(lang) { return lang.value !== "auto" })
     contentHeight: column.implicitHeight
     boundsBehavior: Flickable.StopAtBounds; clip: true
@@ -179,14 +181,21 @@ Flickable {
             NativeText { text: root.tr("model"); Layout.fillWidth: true }
             NativeField { id: model; objectName: "ai.model"; Layout.fillWidth: true; text: root.aiModel; onTextEdited: { root.aiDirty = true; root.aiModel = text } }
             NativeText { text: root.tr("apiKey"); Layout.fillWidth: true }
-            NativeField { id: aiKey; objectName: "ai.key"; Layout.fillWidth: true; password: true; placeholderText: root.tr(root.document.ai && root.document.ai.has_api_key ? "keyStored" : "keyEmpty") }
-            NativeToggle { visible: !!root.document.ai && root.document.ai.has_api_key === true; label: root.tr("deleteKey"); Layout.fillWidth: true; checked: root.clearAiKey; onClicked: root.clearAiKey = !root.clearAiKey }
+            NativeField { id: aiKey; objectName: "ai.key"; Layout.fillWidth: true; password: true; placeholderText: root.tr(root.document.ai && root.document.ai.has_api_key && !root.aiEndpointChanged ? "keyStored" : "keyEmpty") }
+            NativeText {
+                objectName: "ai.keyResetHint"
+                visible: !!root.document.ai && root.document.ai.has_api_key === true && root.aiEndpointChanged
+                text: root.tr("aiKeyResetHint"); secondary: true
+                color: Theme.secondary(Commons.Color.muted, Commons.Color.popups.text, Commons.Color.popups.background)
+                Layout.fillWidth: true
+            }
+            NativeToggle { visible: !!root.document.ai && root.document.ai.has_api_key === true && !root.aiEndpointChanged; label: root.tr("deleteKey"); Layout.fillWidth: true; checked: root.clearAiKey; onClicked: root.clearAiKey = !root.clearAiKey }
             NativeButton { foreground: Commons.Color.popups.text;
                 objectName: "ai.save"
                 text: root.tr("save"); focusable: true; enabled: !root.saving
                 onClicked: {
                     root.saving = true
-                    root.service.save("ai.save", {enabled:root.aiChecked,base_url:endpoint.text,model:model.text,api_key:aiKey.text || null,clear_key:root.clearAiKey}, function(ok) {
+                    root.service.save("ai.save", {enabled:root.aiChecked,base_url:endpoint.text,model:model.text,api_key:aiKey.text || null,clear_key:root.clearAiKey || (root.aiEndpointChanged && !aiKey.text.trim())}, function(ok) {
                         root.saving = false
                         if (ok) { aiKey.text = ""; root.clearAiKey = false; root.aiDirty = false; root.aiSwitchDirty = false; root.loadAi() }
                     })
@@ -264,6 +273,8 @@ Flickable {
         NativeDropdown { objectName: "usage.days"; label: root.tr("historyDays"); Layout.fillWidth: true; value: String(root.usageDraft.history_days); options: [{value:"0",label:root.tr("unlimited")},{value:"7",label:Strings.days(7,root.service ? root.service.language : "en")},{value:"30",label:Strings.days(30,root.service ? root.service.language : "en")},{value:"90",label:Strings.days(90,root.service ? root.service.language : "en")},{value:"365",label:Strings.days(365,root.service ? root.service.language : "en")}]; onChanged: function(value) { root.changeUsage("history_days",Number(value)) } }
         NativeDropdown { objectName: "usage.limit"; label: root.tr("historyLimit"); Layout.fillWidth: true; value: String(root.usageDraft.history_limit); options: [{value:"0",label:root.tr("unlimited")},{value:"100",label:"100"},{value:"1000",label:"1000"},{value:"10000",label:"10000"}]; onChanged: function(value) { root.changeUsage("history_limit",Number(value)) } }
         NativeToggle { objectName: "usage.ocr"; label: root.tr("ocrCleanup"); checked: root.usageDraft.ocr_cleanup; Layout.fillWidth: true; onClicked: root.changeUsage("ocr_cleanup",!checked) }
+        NativeToggle { objectName: "usage.selectionAutoTranslate"; label: root.tr("selectionClipboardAuto"); checked: !!root.usageDraft.selection_clipboard_auto_translate; Layout.fillWidth: true; onClicked: root.changeUsage("selection_clipboard_auto_translate",!checked) }
+        NativeText { text: root.tr("selectionClipboardAutoHelp"); secondary: true; color: Theme.secondary(Commons.Color.muted,Commons.Color.popups.text,Commons.Color.popups.background); Layout.fillWidth: true }
         NativeButton {
             objectName: "usage.save"; text: root.tr("save"); focusable: true; enabled: !root.saving && root.usageDirty && !root.service.orderSaving
             onClicked: {

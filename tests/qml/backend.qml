@@ -66,7 +66,22 @@ ShellRoot {
         {name:"real-invalid-query-unblocks-ui",run:function() { service.translate('x'.repeat(20001)); waitFor(function() { return !service.busy && !!service.error },"Invalid query remained busy") }},
         {name:"real-no-enabled-provider-finishes-with-error",run:function() { var update=Object.assign({},service.settings.ai,{enabled:false}); delete update.has_api_key; service.save("ai.save",update); waitFor(function() { return !service.settings.ai.enabled },"AI disable failed"); translate("disabled"); check(!!service.error,"No-provider error missing"); update.enabled=true; service.save("ai.save",update); waitFor(function() { return service.settings.ai.enabled },"AI enable failed") }},
         {name:"real-cancel-ignores-delayed-result",run:function() { service.translate("slow bridge"); waitFor(function() { return service.cards.length===1 },"No start event"); service.stop(); driver.wait(400); check(!service.busy && service.cards.every(function(card) { return !card.pending && card.paragraphs.length===0 }),"Cancelled result rendered") }},
-        {name:"real-current-selection-to-translation",run:function() { service.capture("selection"); waitFor(function() { return !service.captureBusy && !service.busy && service.text==="bridge selection\n" },"Real capture did not translate"); check(service.cards[0].paragraphs[0]==="translated: bridge selection","Capture result missing") }},
+        {name:"real-current-selection-to-translation",run:function() {
+            var before=rpc("history.list").length
+            service.capture("selection")
+            waitFor(function() { return !service.captureBusy && service.text==="bridge selection\n" },"Real capture did not prefill")
+            check(!service.busy && service.cards.length===0 && service.notice===service.tr("confirmSelection"),"Clipboard fallback auto-translated before opt-in")
+            check(rpc("history.list").length===before,"Clipboard fallback translated externally without confirmation")
+            panel.focusInput(); driver.keyClick(Qt.Key_Return,Qt.NoModifier,0)
+            waitFor(function() { return !service.busy && service.cards.length===1 && !service.cards[0].pending },"Manual Enter did not translate prefilled selection")
+            check(service.cards[0].paragraphs[0]==="translated: bridge selection","Capture result missing")
+            var usage=Object.assign({},rpc("settings").usage,{selection_clipboard_auto_translate:true})
+            rpc("usage.save",usage)
+            service.capture("selection")
+            waitFor(function() { return !service.captureBusy && !service.busy && service.cards.length===1 && !service.cards[0].pending },"Opt-in auto-translate capture did not finish")
+            check(service.cards[0].paragraphs[0]==="translated: bridge selection","Opt-in capture result missing")
+            usage.selection_clipboard_auto_translate=false; rpc("usage.save",usage)
+        }},
         {name:"real-selection-window-change-opens-empty-input-without-history",run:function() { var before=rpc("history.list").length; service.capture("selection",{address:"0xdef",pid:2000000,class:"chromium"}); waitFor(function() { return !service.captureBusy },"Empty selection stayed busy"); check(service.text==="" && service.cards.length===0 && !service.busy && service.error==="","Empty selection retained old query"); check(rpc("history.list").length===before,"Empty selection submitted a translation") }},
         {name:"real-screenshot-local-ocr-to-translation",run:function() { service.capture("screenshot"); waitFor(function() { return !service.captureBusy && !service.busy && service.text==="bridge OCR\n" },"Real screenshot did not translate") }},
         {name:"real-silent-ocr-no-history",run:function() { var before=rpc("history.list").length; service.capture("ocr"); waitFor(function() { return !service.captureBusy },"Silent OCR stuck"); check(rpc("history.list").length===before,"Silent OCR wrote history") }},

@@ -8,7 +8,7 @@ import time
 
 lock = threading.Lock()
 state = {
-    'usage': {'service_order':['YoudaoDict','DeepLApi','AI','Bing','DeepLFree'],'history_enabled':True,'history_days':0,'history_limit':0,'ocr_cleanup':False},
+    'usage': {'service_order':['YoudaoDict','DeepLApi','AI','Bing','DeepLFree'],'history_enabled':True,'history_days':0,'history_limit':0,'ocr_cleanup':False,'selection_clipboard_auto_translate':False},
     'preferences': {'language': 'en'},
     'services': {key: True for key in ['youdao', 'bing', 'deepl']},
     'ai': {'enabled': False, 'base_url': 'http://localhost:11434/v1', 'model': '', 'has_api_key': False},
@@ -84,9 +84,12 @@ for line in sys.stdin:
         elif method == 'service.set': state['services'][params['id']] = params['enabled']
         else:
             key = method.split('.')[0]
+            old_base = state[key].get('base_url', '').strip().rstrip('/') if key == 'ai' else None
             state[key].update({name:value for name,value in params.items() if name not in ['api_key','clear_key']})
+            if key == 'ai':
+                state[key]['base_url'] = state[key].get('base_url', '').strip().rstrip('/')
             if params.get('api_key'): state[key]['has_api_key'] = True
-            elif params.get('clear_key'): state[key]['has_api_key'] = False
+            elif params.get('clear_key') or (key == 'ai' and old_base != state[key]['base_url']): state[key]['has_api_key'] = False
         reply(identity,state)
     elif method == 'service.order':
         if mode == 'reject_save':
@@ -137,6 +140,7 @@ for line in sys.stdin:
     elif method == 'capture':
         if mode == 'cancel_capture': reply(identity,{'cancelled':True})
         elif mode == 'empty_selection' and params['action'] == 'selection': reply(identity,{'action':'selection','text':''})
+        elif mode == 'selection_prefill' and params['action'] == 'selection': reply(identity,{'action':'selection','text':'prefilled clipboard selection','origin':'clipboard_fallback','auto_translate':False})
         elif params['action'] == 'ocr': reply(identity,{'copied':True})
         elif params['action'] == 'annotate': reply(identity,{'action':'annotate','handled':True})
         else: reply(identity,{'text':'captured fixture'})

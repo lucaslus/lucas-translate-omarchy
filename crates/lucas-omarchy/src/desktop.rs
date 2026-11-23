@@ -234,7 +234,22 @@ pub async fn capture(action: &str, source: &Value) -> Result<Value, String> {
         if text.chars().count() > 20_000 {
             return Err("Select 1–20000 characters".into());
         }
-        return Ok(json!({"text":text,"action":action}));
+        let origin = reply["origin"].as_str();
+        let auto_translate = if text.is_empty() {
+            false
+        } else if origin == Some("accessibility") {
+            true
+        } else {
+            crate::config::load_usage()
+                .map(|usage| usage.selection_clipboard_auto_translate)
+                .unwrap_or(false)
+        };
+        return Ok(json!({
+            "text": text,
+            "action": action,
+            "origin": origin,
+            "auto_translate": auto_translate,
+        }));
     }
     if !["screenshot", "ocr", "annotate"].contains(&action) {
         return Err("Unknown capture action".into());

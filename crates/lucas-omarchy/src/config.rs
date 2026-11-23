@@ -85,6 +85,8 @@ struct Document {
     base_url: String,
     model: String,
     secret_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    secret_base_url: Option<String>,
     #[serde(skip_serializing_if = "String::is_empty")]
     api_key: String,
     routing: RoutingConfig,
@@ -100,6 +102,7 @@ pub struct UsageConfig {
     pub history_days: u32,
     pub history_limit: u32,
     pub ocr_cleanup: bool,
+    pub selection_clipboard_auto_translate: bool,
 }
 impl Default for UsageConfig {
     fn default() -> Self {
@@ -111,6 +114,7 @@ impl Default for UsageConfig {
             history_days: 0,
             history_limit: 0,
             ocr_cleanup: false,
+            selection_clipboard_auto_translate: false,
         }
     }
 }
@@ -319,6 +323,35 @@ struct Store {
     cached: Option<Document>,
     secret: Option<(String, String)>,
 }
+fn normalize_base_url(value: &str) -> String {
+    value.trim().trim_end_matches('/').to_string()
+}
+
+fn same_ai_endpoint(left: &str, right: &str) -> bool {
+    let left = normalize_base_url(left);
+    let right = normalize_base_url(right);
+    if left == right {
+        return true;
+    }
+    match (url::Url::parse(&left), url::Url::parse(&right)) {
+        (Ok(a), Ok(b)) => {
+            a.scheme() == b.scheme()
+                && a.host_str() == b.host_str()
+                && a.port_or_known_default() == b.port_or_known_default()
+                && a.path().trim_end_matches('/') == b.path().trim_end_matches('/')
+        }
+        _ => false,
+    }
+}
+
+fn secret_matches_endpoint(doc: &Document) -> bool {
+    doc.secret_id.is_some()
+        && doc
+            .secret_base_url
+            .as_deref()
+            .is_none_or(|bound| same_ai_endpoint(bound, &doc.base_url))
+}
+
 impl Store {
     fn load(&mut self) -> Result<Document, String> {
         if let Some(doc) = &self.cached {
@@ -337,6 +370,8 @@ impl Store {
             self.vault.set(&id, &doc.api_key)?;
             let key = std::mem::take(&mut doc.api_key);
             doc.secret_id = Some(id.clone());
+            let base = normalize_base_url(&doc.base_url);
+            doc.secret_base_url = (!base.is_empty()).then_some(base);
             if let Err(e) = self.persist(&doc) {
                 self.vault.remove(&id);
                 return Err(e);
@@ -370,17 +405,20 @@ impl Store {
     }
     fn ai_view(&mut self) -> Result<AiView, String> {
         let d = self.load()?;
+        let has_api_key = secret_matches_endpoint(&d);
         Ok(AiView {
             enabled: d.enabled,
             base_url: d.base_url,
             model: d.model,
-            has_api_key: d.secret_id.is_some(),
+            has_api_key,
         })
     }
     fn ai_save(&mut self, c: AiUpdate) -> Result<(), String> {
         validate_ai(&c)?;
         let mut d = self.load()?;
         let old = d.secret_id.clone();
+        let new_base_url = normalize_base_url(&c.base_url);
+        let endpoint_changed = !same_ai_endpoint(&d.base_url, &new_base_url);
         let key = c.api_key.as_deref().unwrap_or("").trim();
         let new = if key.is_empty() {
             None
@@ -390,11 +428,16 @@ impl Store {
         if let Some(id) = &new {
             self.vault.set(id, key)?;
             d.secret_id = Some(id.clone());
-        } else if c.clear_key {
+            d.secret_base_url = (!new_base_url.is_empty()).then(|| new_base_url.clone());
+        } else if c.clear_key || endpoint_changed {
+            // Never carry one AI provider's stored credential over to a different endpoint.
             d.secret_id = None;
+            d.secret_base_url = None;
+        } else if d.secret_id.is_some() && d.secret_base_url.is_none() && !new_base_url.is_empty() {
+            d.secret_base_url = Some(new_base_url.clone());
         }
         d.enabled = c.enabled;
-        d.base_url = c.base_url.trim().trim_end_matches('/').into();
+        d.base_url = new_base_url;
         d.model = c.model.trim().into();
         if let Err(e) = self.persist(&d) {
             if let Some(id) = new {
@@ -413,7 +456,7 @@ impl Store {
     fn snapshot(&mut self) -> Result<(AiConfig, RoutingConfig, ServiceToggles), String> {
         let d = self.load()?;
         let mut error = None;
-        let key = if d.enabled {
+        let key = if d.enabled && secret_matches_endpoint(&d) {
             if let Some(id) = &d.secret_id {
                 if self.secret.as_ref().map(|(i, _)| i) != Some(id) {
                     match self.vault.get(id) {
@@ -707,5 +750,61 @@ mod tests {
             s.vault.get(old.secret_id.as_ref().unwrap()).unwrap(),
             "original-test-key"
         );
+    }
+    #[test]
+    fn changing_ai_base_url_with_empty_key_clears_stored_secret() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut s = store(dir.path().join("config.json"));
+        s.ai_save(AiUpdate {
+            enabled: true,
+            base_url: "https://provider-a.example/v1".into(),
+            model: "model-a".into(),
+            api_key: Some("provider-a-secret".into()),
+            clear_key: false,
+        })
+        .unwrap();
+        let old_id = s.load().unwrap().secret_id.unwrap();
+        // Same endpoint, different model: keep the stored credential.
+        s.ai_save(AiUpdate {
+            enabled: true,
+            base_url: "https://provider-a.example/v1/".into(),
+            model: "model-a2".into(),
+            api_key: None,
+            clear_key: false,
+        })
+        .unwrap();
+        assert!(s.ai_view().unwrap().has_api_key);
+        assert_eq!(s.snapshot().unwrap().0.api_key, "provider-a-secret");
+        // Switching to Provider B with an empty key must clear Provider A's key.
+        s.ai_save(AiUpdate {
+            enabled: true,
+            base_url: "https://provider-b.example/v1".into(),
+            model: "model-b".into(),
+            api_key: None,
+            clear_key: false,
+        })
+        .unwrap();
+        assert!(!s.ai_view().unwrap().has_api_key);
+        assert!(s.snapshot().unwrap().0.api_key.is_empty());
+        assert!(s.vault.get(&old_id).is_err());
+    }
+    #[test]
+    fn manual_base_url_mismatch_never_sends_bound_secret() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut s = store(dir.path().join("config.json"));
+        s.ai_save(AiUpdate {
+            enabled: true,
+            base_url: "https://provider-a.example/v1".into(),
+            model: "model-a".into(),
+            api_key: Some("provider-a-secret".into()),
+            clear_key: false,
+        })
+        .unwrap();
+        // Simulate an out-of-band edit to base_url in config.json without updating secret_base_url.
+        let mut doc = s.load().unwrap();
+        doc.base_url = "https://provider-b.example/v1".into();
+        s.cached = Some(doc);
+        assert!(!s.ai_view().unwrap().has_api_key);
+        assert!(s.snapshot().unwrap().0.api_key.is_empty());
     }
 }

@@ -258,7 +258,14 @@ class NativeBackend(unittest.TestCase):
         self.assertIn('DeepL API Key', result['error'])
 
     def test_selection_screenshot_and_silent_ocr(self):
-        self.assertEqual(self.call('capture', {'action': 'selection'})['text'], 'selected text\n')
+        selection = self.call('capture', {'action': 'selection'})
+        self.assertEqual(selection['text'], 'selected text\n')
+        self.assertEqual(selection['origin'], 'clipboard_fallback')
+        self.assertFalse(selection['auto_translate'])
+        usage = self.call('settings')['usage']
+        usage['selection_clipboard_auto_translate'] = True
+        self.call('usage.save', usage)
+        self.assertTrue(self.call('capture', {'action': 'selection'})['auto_translate'])
         self.assertEqual(self.call('capture', {'action': 'screenshot'})['text'], 'recognized text\n')
         result = self.call('capture', {'action': 'ocr'})
         self.assertTrue(result['copied'])

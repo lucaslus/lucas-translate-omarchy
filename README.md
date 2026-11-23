@@ -9,7 +9,7 @@ Omarchy 桌面上的划词翻译、查词、本地 OCR 与悬浮截图标注工�
 ## 核心功能
 
 ### 划词与输入翻译
-选中浏览器、终端、聊天软件或编辑器里的文字，按 `Super+Ctrl+Shift+D`（或右键点击顶栏图标）即可直接翻译；没有选区时打开空白输入框。支持按源语言自动匹配目标语种，单个渠道超时或报错可以单独重试。划词优先读取无障碍选区，不支持时临时复制选区并在读完后还原原剪贴板，在代码编辑器里未选中文字时不会误翻当前整行。
+选中浏览器、终端、聊天软件或编辑器里的文字，按 `Super+Ctrl+Shift+D`（或右键点击顶栏图标）即可划词取字；没有选区时打开空白输入框。支持按源语言自动匹配目标语种，单个渠道超时或报错可以单独重试。划词优先读取无障碍选区并直接翻译；不支持无障碍时通过临时复制读取选区并自动还原原剪贴板（自动跳过敏感/密码管理器剪贴板和编辑器空选区整行复制），默认先填入输入框按回车确认翻译，也可在设置页开启自动翻译。
 
 ### 词典、免费翻译与 AI 流式输出
 内置有道词典（带英美音标与真人发音）、Bing 和 DeepL 免费翻译。也可以在设置页填入 DeepL 官方 API、OpenAI 兼容接口或本地 Ollama，AI 译文支持边生成边显示和随时取消。五个服务支持直接拖拽排序。
@@ -91,7 +91,7 @@ python3 scripts/install-omarchy-native.py
 Lucas Translate (`lucas.translate`) adds quick selection translation, dictionary lookup with phonetics and audio, local screenshot OCR, and an optional floating screenshot annotation editor to Omarchy. Its colors, corners, and fonts follow your active Omarchy theme automatically.
 
 Main features:
-- Selection and input translation (`Super+Ctrl+Shift+D`, right-click on the bar icon, or `Super+Ctrl+Shift+I`) across browsers, terminals, chat apps, and code editors (restoring the original clipboard and ignoring empty-selection line copies), with per-language target rules and per-provider retry.
+- Selection and input translation (`Super+Ctrl+Shift+D`, right-click on the bar icon, or `Super+Ctrl+Shift+I`) across browsers, terminals, chat apps, and code editors: AT-SPI selections translate immediately, while the clipboard fallback skips sensitive-marked offers and empty-selection line copies, restores the original clipboard, and prefills the input box until you press `Enter` by default (optional auto-translate toggle in Settings).
 - Built-in Youdao dictionary (UK/US phonetics and audio), free Bing and DeepL translation, plus DeepL API and OpenAI-compatible or local Ollama streaming.
 - Local screenshot OCR via `tesseract` (offline English/Chinese): translate a region (`Super+Ctrl+Shift+S`) or copy text straight to the clipboard (`Super+Ctrl+Shift+C`), with optional line-break cleanup.
 - Optional floating screenshot annotation window (`Super+Ctrl+Shift+P`) with a theme-colored bottom action bar for Confirm & Copy (`Enter`) and Cancel (`Esc`).

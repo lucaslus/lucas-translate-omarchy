@@ -249,7 +249,10 @@ async fn main() {
         [mode, source] if mode == "--read-selection" => {
             let source: Value = serde_json::from_str(source).unwrap_or(Value::Null);
             let result = match selection::read(&source).await {
-                Ok(text) => json!({"text":text.unwrap_or_default()}),
+                Ok(Some(selected)) => {
+                    json!({"text":selected.text,"origin":selected.origin})
+                }
+                Ok(None) => json!({"text":""}),
                 Err(error) => json!({"error":error}),
             };
             println!("{result}");

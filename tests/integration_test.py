@@ -73,7 +73,7 @@ class Integration(unittest.TestCase):
             self.assertEqual(json.loads(arguments[3]),{'action':'selection','source':{key:source[key] for key in ['address','pid','class']}})
 
     def installer_fixture(self, failure=None, initially_installed=True, stale_ui=False, installer_root=ROOT,
-                          custom_data=False, linked_icon=False):
+                          custom_data=False, linked_icon=False, without_shortcuts=False, concurrent_user_edits=False):
         """Run the actual transaction with every Shell/Hyprland command intercepted."""
         spec = importlib.util.spec_from_file_location('native_installer', installer_root / 'scripts/install-omarchy-native.py')
         installer = importlib.util.module_from_spec(spec); spec.loader.exec_module(installer)
@@ -86,34 +86,46 @@ class Integration(unittest.TestCase):
             runtime = scratch / 'runtime/shell/Ui'; runtime.mkdir(parents=True); (runtime / 'BorderSurface.qml').write_text('fixture')
             binary = scratch / 'backend'; binary.write_text('#!/bin/sh\nexit 0\n'); binary.chmod(0o755)
             target = config / 'omarchy/plugins/lucas.translate'
-            paths = [(target, 'plugin'), (destination / 'lucas-translate-omarchy-backend', 'backend'),
-                     (destination / 'lucas-translate-native', 'launcher'), (desktop, 'desktop'), (icon, 'icon'),
-                     (destination / 'lucas-translate', 'dispatch'), (config / 'omarchy/shell.json', 'shell.json'),
-                     (config / 'hypr/hyprland.lua', 'hyprland.lua'), (config / 'hypr/lucas-translate.lua', 'lucas-translate.lua'),
-                     (config / 'hypr/lucas-translate-shortcuts.json', 'shortcuts.json')]
+            shell_json = config / 'omarchy/shell.json'
+            hyprland_lua = config / 'hypr/hyprland.lua'
+            owned_paths = [(target, 'plugin'), (destination / 'lucas-translate-omarchy-backend', 'backend'),
+                           (destination / 'lucas-translate-native', 'launcher'), (desktop, 'desktop'), (icon, 'icon'),
+                           (destination / 'lucas-translate', 'dispatch')]
+            shortcut_paths = [(config / 'hypr/lucas-translate.lua', 'lucas-translate.lua'),
+                              (config / 'hypr/lucas-translate-shortcuts.json', 'shortcuts.json')]
+            paths = owned_paths + [(shell_json, 'shell.json'), (hyprland_lua, 'hyprland.lua')] + shortcut_paths
             if initially_installed:
                 for path, name in paths:
                     if name == 'plugin':
                         path.mkdir(parents=True); (path / 'sentinel').write_text('old plugin')
+                    elif name == 'hyprland.lua':
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_text('original hyprland.lua\n' + installer.HYPR_INCLUDE + '\n')
                     else:
                         path.parent.mkdir(parents=True, exist_ok=True); path.write_text('original ' + name)
             else:
-                (config / 'hypr').mkdir(parents=True); (config / 'hypr/hyprland.lua').write_text('original hyprland.lua')
+                (config / 'omarchy').mkdir(parents=True); shell_json.write_text('{"other":"value"}')
+                (config / 'hypr').mkdir(parents=True); hyprland_lua.write_text('original hyprland.lua\n')
             if linked_icon:
                 original_icon = icon.with_name('custom.png')
                 icon.rename(original_icon)
                 icon.symlink_to(original_icon.name)
             previous = {name: ('old plugin' if name == 'plugin' else path.read_text()) for path, name in paths if path.exists()}
-            listed = 0; calls = []; restarted = False
+            rescanned = False; listed_after_rescan = 0; calls = []; restarted = False
+            enabled_history = []
             def run(*arguments, **options):
-                nonlocal listed, restarted
+                nonlocal rescanned, listed_after_rescan, restarted
                 calls.append(arguments)
                 output = 'ok'
                 if arguments[:3] == ('omarchy-shell', 'shell', 'setPluginEnabled'):
-                    state = config / 'omarchy/shell.json'; state.parent.mkdir(parents=True, exist_ok=True); state.write_text('modified shell')
+                    enabled_history.append(arguments[-1])
+                    if concurrent_user_edits:
+                        shell_json.write_text('{"other":"user-edited-after-backup"}')
                     if arguments[-1] == 'true' and failure == 'enable': output = 'refused'
-                if arguments[:3] == ('omarchy-shell', 'shell', 'rescanPlugins') and failure == 'rescan':
-                    raise subprocess.CalledProcessError(1, arguments)
+                if arguments[:3] == ('omarchy-shell', 'shell', 'rescanPlugins'):
+                    rescanned = True
+                    if failure == 'rescan':
+                        raise subprocess.CalledProcessError(1, arguments)
                 if arguments[:3] == ('omarchy', 'plugin', 'validate') and failure == 'validate':
                     raise subprocess.CalledProcessError(1, arguments)
                 if arguments[:3] == ('omarchy', 'plugin', 'validate'):
@@ -122,29 +134,53 @@ class Integration(unittest.TestCase):
                     for entry in manifest['entryPoints'].values():
                         self.assertTrue((plugin / entry).is_file(), entry)
                 if arguments[:3] == ('omarchy-shell', 'shell', 'listPlugins'):
-                    listed += 1
-                    output = 'not json' if failure == 'discover' else json.dumps([{'id':'lucas.translate', 'enabled':not (failure == 'final' and listed > 1)}])
+                    if not rescanned:
+                        output = json.dumps([{'id':'lucas.translate', 'enabled':True}] if initially_installed else [])
+                    else:
+                        listed_after_rescan += 1
+                        output = 'not json' if failure == 'discover' else json.dumps([{'id':'lucas.translate', 'enabled':not (failure == 'final' and listed_after_rescan > 1)}])
                 if arguments[:3] == ('omarchy-shell', 'shell', 'call'):
                     output = 'ready'
                     if arguments[-1] == 'revision':
                         output = 'old cached UI' if failure == 'revision' or (stale_ui and not restarted) else json.loads((target / 'qml/BuildInfo.js').read_text().split('=', 1)[1])
                 if arguments[:3] == ('omarchy', 'restart', 'shell'): restarted = True
+                if arguments[0] == 'python3' and arguments[1].endswith('runtime/shortcuts.py'):
+                    (config / 'hypr/lucas-translate.lua').write_text('new shortcuts')
+                    (config / 'hypr/lucas-translate-shortcuts.json').write_text('{"new":true}')
+                    if installer.HYPR_INCLUDE not in hyprland_lua.read_text():
+                        hyprland_lua.write_text(hyprland_lua.read_text().rstrip() + '\n\n' + installer.HYPR_COMMENT + '\n' + installer.HYPR_INCLUDE + '\n')
+                    if concurrent_user_edits:
+                        hyprland_lua.write_text(hyprland_lua.read_text() + '-- independent user bind\n')
                 if arguments[:2] == ('hyprctl', 'configerrors'): output = 'invalid config' if failure == 'shortcuts' else ''
                 return subprocess.CompletedProcess(arguments, 0, stdout=output, stderr='')
             environment = dict(HOME=str(home),XDG_CONFIG_HOME=str(config),XDG_DATA_HOME=str(data) if custom_data else '',
                                XDG_STATE_HOME=str(home / '.local/state'),OMARCHY_PATH=str(runtime.parents[1]))
+            argv = ['installer','--binary',str(binary)] + (['--without-shortcuts'] if without_shortcuts else [])
             with patch.dict(os.environ, environment), patch.object(installer, 'run', side_effect=run), \
                  patch.object(installer, 'require_unlocked'), patch.object(installer.os, 'geteuid', return_value=1000), \
-                 patch('sys.argv', ['installer','--binary',str(binary)]):
+                 patch('sys.argv', argv):
                 if failure:
+                    if concurrent_user_edits and without_shortcuts:
+                        hyprland_lua.write_text(hyprland_lua.read_text() + '-- user edit under without-shortcuts\n')
                     with self.assertRaises((RuntimeError,subprocess.CalledProcessError,json.JSONDecodeError)):
                         installer.main()
-                    for path, name in paths:
+                    for path, name in owned_paths + shortcut_paths:
                         if name in previous:
                             self.assertTrue(path.exists(), name)
                             self.assertEqual((path / 'sentinel').read_text() if name == 'plugin' else path.read_text(), previous[name])
                         else:
                             self.assertFalse(path.exists(), name)
+                    if concurrent_user_edits:
+                        self.assertEqual(shell_json.read_text(), '{"other":"user-edited-after-backup"}')
+                        if without_shortcuts:
+                            self.assertIn('-- user edit under without-shortcuts', hyprland_lua.read_text())
+                            self.assertFalse(any(c[:2] == ('hyprctl', 'reload') for c in calls))
+                        else:
+                            self.assertIn('-- independent user bind', hyprland_lua.read_text())
+                            if not initially_installed:
+                                self.assertNotIn(installer.HYPR_INCLUDE, hyprland_lua.read_text())
+                    if failure != 'validate' and failure != 'rescan':
+                        self.assertEqual(enabled_history[-1], 'true' if initially_installed else 'false')
                     if linked_icon:
                         self.assertEqual(icon.readlink(), Path(original_icon.name))
                         self.assertEqual(original_icon.read_text(), 'original icon')
@@ -157,7 +193,10 @@ class Integration(unittest.TestCase):
                     self.assertEqual({value.name for value in (target / 'runtime').iterdir()}, {'backend.sh', 'dispatch.sh', 'launch.sh', 'shortcuts.py', 'shortcuts.lua'})
                     backups = list((home / '.local/state/lucas-translate-omarchy/install-backups').iterdir())
                     self.assertEqual(len(backups), 1)
-                    self.assertEqual((backups[0] / 'hyprland.lua').read_text(), 'original hyprland.lua')
+                    if not without_shortcuts:
+                        self.assertIn('original hyprland.lua', (backups[0] / 'hyprland.lua').read_text())
+                    else:
+                        self.assertFalse((backups[0] / 'hyprland.lua').exists())
                     icon_value = str(icon) if custom_data else 'lucas-translate'
                     self.assertIn(f'Icon={icon_value}', desktop.read_text().splitlines())
                     self.assertEqual(icon.read_bytes(), (ROOT / 'assets/lucas-translate.png').read_bytes())
@@ -204,6 +243,10 @@ class Integration(unittest.TestCase):
 
     def test_installer_rolls_back_linked_icon_without_writing_through_it(self):
         self.installer_fixture('final', linked_icon=True)
+
+    def test_installer_rollback_preserves_independent_user_edits_to_shared_configs(self):
+        self.installer_fixture('final', initially_installed=False, concurrent_user_edits=True)
+        self.installer_fixture('final', initially_installed=True, without_shortcuts=True, concurrent_user_edits=True)
 
     def test_launcher_dispatch_is_limited_to_omarchy_sessions(self):
         with tempfile.TemporaryDirectory(prefix='lucas-native-dispatch-test-') as directory:

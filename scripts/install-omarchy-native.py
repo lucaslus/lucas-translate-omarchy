@@ -15,6 +15,8 @@ from plugin_files import copy_plugin
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_ID = 'lucas.translate'
 DESKTOP_ICON = Path('icons/hicolor/256x256/apps/lucas-translate.png')
+HYPR_INCLUDE = 'dofile(os.getenv("HOME") .. "/.config/hypr/lucas-translate.lua")'
+HYPR_COMMENT = '-- Lucas Translate floating panel and shortcuts'
 
 
 def run(*arguments, **options):
@@ -82,29 +84,76 @@ def backup(path, destination, *, follow_symlinks=True):
         shutil.copy2(path, destination)
 
 
-def restore(paths, saved):
+def remove_managed_hypr_include(hyprland_lua):
+    """Remove only this plugin's include line from live hyprland.lua, preserving user edits."""
+    if not hyprland_lua.is_file():
+        return
+    original = hyprland_lua.read_text(encoding='utf-8', errors='surrogateescape')
+    lines = original.splitlines(keepends=True)
+    kept = []
+    removed = False
+    for line in lines:
+        if line.strip() == HYPR_INCLUDE:
+            removed = True
+            if kept and kept[-1].strip() == HYPR_COMMENT:
+                kept.pop()
+                if kept and kept[-1].strip() == '':
+                    kept.pop()
+            continue
+        kept.append(line)
+    if not removed:
+        return
+    temp = hyprland_lua.with_name(hyprland_lua.name + '.lucas-rollback-tmp')
+    temp.write_text(''.join(kept), encoding='utf-8', errors='surrogateescape')
+    temp.replace(hyprland_lua)
+
+
+def current_plugin_enabled():
+    try:
+        discovered = json.loads(run('omarchy-shell', 'shell', 'listPlugins', capture_output=True).stdout)
+    except Exception:
+        return None
+    for item in discovered:
+        if isinstance(item, dict) and item.get('id') == PLUGIN_ID:
+            return bool(item.get('enabled'))
+    return None
+
+
+def restore_file(path, previous):
+    if path.is_symlink():
+        path.unlink()
+    elif path.is_dir():
+        shutil.rmtree(path)
+    elif path.exists():
+        path.unlink()
+    if previous.is_symlink():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.symlink_to(previous.readlink())
+    elif previous.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if previous.is_dir():
+            shutil.copytree(previous, path)
+        else:
+            shutil.copy2(previous, path)
+
+
+def restore(owned_paths, shortcut_paths, saved, *, without_shortcuts, touched, previous_enabled, hyprland_lua, had_hypr_include):
     require_unlocked()
-    # Roll back only files managed by this installer.
-    for path, name in paths:
-        previous = saved / name
-        if path.is_symlink():
-            path.unlink()
-        elif path.is_dir():
-            shutil.rmtree(path)
-        elif path.exists():
-            path.unlink()
-        if previous.is_symlink():
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.symlink_to(previous.readlink())
-        elif previous.exists():
-            path.parent.mkdir(parents=True, exist_ok=True)
-            if previous.is_dir():
-                shutil.copytree(previous, path)
-            else:
-                shutil.copy2(previous, path)
-    run('omarchy-shell', 'shell', 'rescanPlugins', capture_output=True)
-    run('omarchy-shell', 'shell', 'reloadConfig', capture_output=True)
-    run('hyprctl', 'reload', capture_output=True)
+    # Roll back only files owned by this plugin; never overwrite shared shell.json
+    # or hyprland.lua from old backups, which could discard independent user edits.
+    if touched['plugin']:
+        for path, name in owned_paths:
+            restore_file(path, saved / name)
+    if not without_shortcuts and touched['shortcuts']:
+        for path, name in shortcut_paths:
+            restore_file(path, saved / name)
+        if not had_hypr_include:
+            remove_managed_hypr_include(hyprland_lua)
+        run('hyprctl', 'reload', capture_output=True)
+    if touched['shell']:
+        run('omarchy-shell', 'shell', 'rescanPlugins', capture_output=True)
+        run('omarchy-shell', 'shell', 'setPluginEnabled', PLUGIN_ID, 'true' if previous_enabled else 'false', capture_output=True)
+        run('omarchy-shell', 'shell', 'reloadConfig', capture_output=True)
 
 
 def main():
@@ -139,25 +188,52 @@ def main():
     destination.mkdir(parents=True, exist_ok=True)
     desktop = data / 'applications/lucas-translate.desktop'
     icon = data / DESKTOP_ICON
-    # Keep a complete pre-install snapshot, including legacy desktop shortcuts.
-    paths = [(target, 'plugin'), (destination / 'lucas-translate-omarchy-backend', 'backend'),
-             (destination / 'lucas-translate-native', 'launcher'), (desktop, 'desktop'), (icon, 'icon'),
-             (destination / 'lucas-translate', 'dispatch'),
-             (config / 'omarchy/shell.json', 'shell.json'),
-             (config / 'hypr/hyprland.lua', 'hyprland.lua'),
-             (config / 'hypr/lucas-translate.lua', 'lucas-translate.lua'),
-             (config / 'hypr/lucas-translate-shortcuts.json', 'shortcuts.json')]
-    for path, name in paths:
+    hyprland_lua = config / 'hypr/hyprland.lua'
+    previous_enabled = current_plugin_enabled()
+    had_hypr_include = (
+        not args.without_shortcuts
+        and hyprland_lua.is_file()
+        and HYPR_INCLUDE.encode() in hyprland_lua.read_bytes()
+    )
+    # Keep backups of plugin-owned files (plus read-only snapshots of shared configs
+    # for manual reference; shared files are never overwritten on automatic rollback).
+    owned_paths = [
+        (target, 'plugin'),
+        (destination / 'lucas-translate-omarchy-backend', 'backend'),
+        (destination / 'lucas-translate-native', 'launcher'),
+        (desktop, 'desktop'),
+        (icon, 'icon'),
+        (destination / 'lucas-translate', 'dispatch'),
+    ]
+    shortcut_paths = [
+        (config / 'hypr/lucas-translate.lua', 'lucas-translate.lua'),
+        (config / 'hypr/lucas-translate-shortcuts.json', 'shortcuts.json'),
+    ]
+    for path, name in owned_paths:
         backup(path, saved / name, follow_symlinks=path != icon)
+    if not args.without_shortcuts:
+        for path, name in shortcut_paths:
+            backup(path, saved / name)
+        backup(hyprland_lua, saved / 'hyprland.lua')
+    touched = {'plugin': False, 'shell': False, 'shortcuts': False}
     try:
-        install(binary, config, target, destination, desktop, icon, args.without_shortcuts)
+        install(binary, config, target, destination, desktop, icon, args.without_shortcuts, touched)
     except Exception:
-        restore(paths, saved)
+        restore(
+            owned_paths,
+            shortcut_paths,
+            saved,
+            without_shortcuts=args.without_shortcuts,
+            touched=touched,
+            previous_enabled=previous_enabled,
+            hyprland_lua=hyprland_lua,
+            had_hypr_include=had_hypr_include,
+        )
         raise
     print(f'Native Omarchy plugin installed. Previous files: {saved}')
 
 
-def install(binary, config, target, destination, desktop, icon, without_shortcuts):
+def install(binary, config, target, destination, desktop, icon, without_shortcuts, touched):
     require_unlocked()
     with tempfile.TemporaryDirectory(prefix='lucas-native-install-', dir=target.parent.parent) as directory:
         staging = Path(directory) / PLUGIN_ID
@@ -165,6 +241,8 @@ def install(binary, config, target, destination, desktop, icon, without_shortcut
         revision = stamp_revision(staging, binary)
         run('omarchy', 'plugin', 'validate', str(staging))
         require_unlocked()
+        touched['shell'] = True
+        touched['plugin'] = True
         run('omarchy-shell', 'shell', 'setPluginEnabled', PLUGIN_ID, 'false', capture_output=True)
         if target.exists():
             shutil.rmtree(target)
@@ -204,6 +282,7 @@ def install(binary, config, target, destination, desktop, icon, without_shortcut
         raise RuntimeError('Shell refused to enable the native plugin; installation rolled back.')
     verify_revision(revision)
     if not without_shortcuts:
+        touched['shortcuts'] = True
         run('python3', str(target / 'runtime/shortcuts.py'))
         run('hyprctl', 'reload', capture_output=True)
         errors = run('hyprctl', 'configerrors', capture_output=True).stdout.strip()

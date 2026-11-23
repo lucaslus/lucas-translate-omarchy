@@ -43,6 +43,7 @@ class Server:
         self.release_copy=threading.Event()
         self.delay_copy=False
         self.pending_copy=False
+        self.second_offer=None
         self.stopped=threading.Event()
         self.selector=selectors.DefaultSelector()
         self.listener=socket.socket(socket.AF_UNIX)
@@ -122,7 +123,11 @@ class Server:
                     trigger.unlink()
                     self.copy_requested.set()
                     if self.delay_copy: self.pending_copy=True
-                    elif self.selection is not None: self.replace(self.selection if isinstance(self.selection,dict) else {'text/plain;charset=utf-8':self.selection})
+                    elif self.selection is not None:
+                        self.replace(self.selection if isinstance(self.selection,dict) else {'text/plain;charset=utf-8':self.selection})
+                        if self.second_offer is not None:
+                            follow=self.second_offer; self.second_offer=None
+                            threading.Timer(0.02, lambda f=follow: self.replace(f if isinstance(f,dict) else {'text/plain;charset=utf-8':f})).start()
                 if self.pending_copy and self.release_copy.is_set():
                     self.pending_copy=False
                     if self.selection is not None: self.replace(self.selection if isinstance(self.selection,dict) else {'text/plain;charset=utf-8':self.selection})
@@ -196,7 +201,7 @@ else:
 
     def test_current_selection_restores_all_clipboard_formats(self):
         self.server.selection='本次鼠标选区'.encode()
-        self.assertEqual(self.read(),{'text':'本次鼠标选区'})
+        self.assertEqual(self.read(),{'text':'本次鼠标选区','origin':'clipboard_fallback'})
         self.assertEqual(self.contents(),self.original)
 
     def test_no_selection_does_not_translate_existing_clipboard(self):
@@ -205,13 +210,13 @@ else:
 
     def test_identical_selection_can_be_translated_again(self):
         self.server.selection=b'old clipboard'
-        self.assertEqual(self.read(),{'text':'old clipboard'})
-        self.assertEqual(self.read(),{'text':'old clipboard'})
+        self.assertEqual(self.read(),{'text':'old clipboard','origin':'clipboard_fallback'})
+        self.assertEqual(self.read(),{'text':'old clipboard','origin':'clipboard_fallback'})
         self.assertEqual(self.contents(),self.original)
 
     def test_deselection_after_success_does_not_reuse_previous_query(self):
         self.server.selection=b'live selected text'
-        self.assertEqual(self.read(),{'text':'live selected text'})
+        self.assertEqual(self.read(),{'text':'live selected text','origin':'clipboard_fallback'})
         self.server.selection=None
         self.assertEqual(self.read(),{'text':''})
         self.assertEqual(self.contents(),self.original)
@@ -225,13 +230,13 @@ else:
         image={'image/png':b'\x89PNG\x00\xff'}
         self.server.replace(image)
         self.server.selection=b'live selection over an image clipboard'
-        self.assertEqual(self.read(),{'text':'live selection over an image clipboard'})
+        self.assertEqual(self.read(),{'text':'live selection over an image clipboard','origin':'clipboard_fallback'})
         self.assertEqual(self.contents(),image)
 
     def test_empty_clipboard_is_restored_after_current_selection(self):
         self.server.replace(None)
         self.server.selection=b'live selection'
-        self.assertEqual(self.read(),{'text':'live selection'})
+        self.assertEqual(self.read(),{'text':'live selection','origin':'clipboard_fallback'})
         result=subprocess.run(['wl-paste','--list-types'],capture_output=True,env=self.environment,timeout=2)
         self.assertNotEqual(result.returncode,0)
 
@@ -253,7 +258,26 @@ else:
             'text/plain;charset=utf-8':b'selected word',
             'chromium/x-web-custom-data':pickle([('vscode-editor-data','{"version":1,"isFromEmptySelection":false}')]),
         }
-        self.assertEqual(self.read(),{'text':'selected word'})
+        self.assertEqual(self.read(),{'text':'selected word','origin':'clipboard_fallback'})
+        self.assertEqual(self.contents(),self.original)
+
+    def test_sensitive_existing_clipboard_is_never_touched(self):
+        secret={'text/plain;charset=utf-8':b'super-secret-password','x-kde-passwordManagerHint':b'secret'}
+        self.server.replace(secret)
+        self.server.selection=b'should not be copied'
+        self.assertEqual(self.read(),{'text':''})
+        self.assertFalse(self.server.copy_requested.is_set())
+        self.assertEqual(self.contents(),secret)
+
+    def test_sensitive_new_offer_is_rejected_and_restores_clipboard(self):
+        self.server.selection={'text/plain;charset=utf-8':b'generated-secret','x-kde-passwordManagerHint':b'secret'}
+        self.assertEqual(self.read(),{'text':''})
+        self.assertEqual(self.contents(),self.original)
+
+    def test_contested_global_clipboard_race_is_rejected_and_restores_clipboard(self):
+        self.server.selection=b'foreign producer text'
+        self.server.second_offer=b'requested selection text'
+        self.assertEqual(self.read(),{'text':''})
         self.assertEqual(self.contents(),self.original)
 
     def test_backend_shutdown_still_restores_clipboard(self):

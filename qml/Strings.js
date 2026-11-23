@@ -3,7 +3,7 @@
 var labels = {
     reorder: ["Drag to reorder", "拖拽排序"],
     removed: ["Removed", "已移除"], search: ["Search records…", "搜索记录…"], viewResults: ["View results", "查看完整结果"], collapse: ["Collapse", "收起"],
-    serviceOrder: ["Service order", "服务顺序"], historyStorage: ["Save history", "保存历史"], historyDays: ["Retention", "保留时间"], historyLimit: ["Record limit", "记录上限"], unlimited: ["Unlimited", "不限"], ocrCleanup: ["Join OCR text lines", "整理 OCR 断行"], usage: ["Usage", "使用偏好"],
+    serviceOrder: ["Service order", "服务顺序"], historyStorage: ["Save history", "保存历史"], historyDays: ["Retention", "保留时间"], historyLimit: ["Record limit", "记录上限"], unlimited: ["Unlimited", "不限"], ocrCleanup: ["Join OCR text lines", "整理 OCR 断行"], selectionClipboardAuto: ["Auto-translate clipboard fallback", "剪贴板划词兜底自动翻译"], selectionClipboardAutoHelp: ["Off by default: clipboard-captured selections fill the input box until you press Enter.", "默认关闭：通过剪贴板读取的选区会先填入输入框，按回车再翻译。"], confirmSelection: ["Selection filled. Press Enter to translate.", "已填入选中文字，按回车确认翻译。"], aiKeyResetHint: ["Changing Base URL clears the previously saved API key unless you enter a new one.", "更改服务地址时会自动清除之前保存的密钥，如需认证请重新填写。"], usage: ["Usage", "使用偏好"],
     translate: ["Translate", "翻译"], settings: ["Settings", "设置"], history: ["History", "历史"],
     favorites: ["Favorites", "收藏"], close: ["Close", "关闭"], input: ["Type or paste text…", "输入或粘贴文字…"],
     source: ["Source", "原文"], target: ["Target", "译文"], auto: ["Automatic", "自动"],
@@ -99,6 +99,8 @@ function message(value,language) {
         "Copied": labels.copied, "已复制": labels.copied,
         "Removed": labels.removed, "已移除": labels.removed,
         "Connected": labels.connected, "连接正常": labels.connected,
+        "Selection filled. Press Enter to translate.": labels.confirmSelection,
+        "已填入选中文字，按回车确认翻译。": labels.confirmSelection,
         "Translation service stopped. Retry to reconnect.": labels.backendFailed,
         "翻译服务已停止，重试以重新连接。": labels.backendFailed,
         "The operation timed out. Retry when the service responds.": labels.timeout,

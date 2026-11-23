@@ -237,7 +237,8 @@ QtObject {
             }
             if (ok && data.text) {
                 text = data.text
-                translate(text)
+                if (data.auto_translate !== false) translate(text)
+                else { stop(); cards = []; detection = ({}); notice = tr("confirmSelection") }
                 if (shell) shell.summon("lucas.translate", JSON.stringify({action:"captured"}))
             } else if (ok && data.copied) notice = tr("copied")
             else if (!ok && shell) shell.summon("lucas.translate", JSON.stringify({action:"error"}))
