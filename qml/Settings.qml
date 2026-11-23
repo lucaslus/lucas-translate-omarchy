@@ -106,11 +106,16 @@ Flickable {
         id: column
         width: root.width; spacing: Commons.Style.spacing.md
         NativeDropdown {
+            id: interfaceLanguage
             objectName: "interfaceLanguage"
             Layout.fillWidth: true; label: root.tr("language")
             value: root.document.preferences ? root.document.preferences.language : "auto"
             options: [{value:"auto",label:root.tr("system")},{value:"en",label:"English"},{value:"zh-CN",label:"简体中文"}]
-            onChanged: function(value) { root.service.save("preferences.save", {language:value}) }
+            onChanged: function(value) {
+                root.service.save("preferences.save", {language:value}, function(ok) {
+                    if (!ok) interfaceLanguage.value = Qt.binding(function() { return root.document.preferences ? root.document.preferences.language : "auto" })
+                })
+            }
         }
         NativeSectionHeader { color: Theme.secondary(Commons.Color.muted, Commons.Color.popups.text, Commons.Color.popups.background); text: root.tr("services"); Layout.fillWidth: true }
         ServiceList {
@@ -236,7 +241,9 @@ Flickable {
                     onTextEdited: { root.shortcutsDirty = true; var next = Object.assign({}, root.draftShortcuts); next[shortcut.modelData.id] = text; root.draftShortcuts = next }
                 }
                 NativeText {
-                    text: root.service && root.service.shortcuts.conflicts ? root.service.shortcuts.conflicts[shortcut.modelData.id] || "" : ""
+                    objectName: "shortcut.conflict." + shortcut.modelData.id
+                    text: root.service && root.service.shortcuts.conflicts && root.service.shortcuts.conflicts[shortcut.modelData.id]
+                        ? Strings.message(root.service.shortcuts.conflicts[shortcut.modelData.id], root.service.language) : ""
                     visible: !!text; color: Commons.Color.urgent; Layout.fillWidth: true
                 }
             }
@@ -254,7 +261,7 @@ Flickable {
         }
         NativeSectionHeader { text: root.tr("usage"); color: Theme.secondary(Commons.Color.muted,Commons.Color.popups.text,Commons.Color.popups.background); Layout.fillWidth: true }
         NativeToggle { objectName: "usage.history"; label: root.tr("historyStorage"); checked: root.usageDraft.history_enabled; Layout.fillWidth: true; onClicked: root.changeUsage("history_enabled",!checked) }
-        NativeDropdown { objectName: "usage.days"; label: root.tr("historyDays"); Layout.fillWidth: true; value: String(root.usageDraft.history_days); options: [{value:"0",label:root.tr("unlimited")},{value:"7",label:"7 d"},{value:"30",label:"30 d"},{value:"90",label:"90 d"},{value:"365",label:"365 d"}]; onChanged: function(value) { root.changeUsage("history_days",Number(value)) } }
+        NativeDropdown { objectName: "usage.days"; label: root.tr("historyDays"); Layout.fillWidth: true; value: String(root.usageDraft.history_days); options: [{value:"0",label:root.tr("unlimited")},{value:"7",label:Strings.days(7,root.service ? root.service.language : "en")},{value:"30",label:Strings.days(30,root.service ? root.service.language : "en")},{value:"90",label:Strings.days(90,root.service ? root.service.language : "en")},{value:"365",label:Strings.days(365,root.service ? root.service.language : "en")}]; onChanged: function(value) { root.changeUsage("history_days",Number(value)) } }
         NativeDropdown { objectName: "usage.limit"; label: root.tr("historyLimit"); Layout.fillWidth: true; value: String(root.usageDraft.history_limit); options: [{value:"0",label:root.tr("unlimited")},{value:"100",label:"100"},{value:"1000",label:"1000"},{value:"10000",label:"10000"}]; onChanged: function(value) { root.changeUsage("history_limit",Number(value)) } }
         NativeToggle { objectName: "usage.ocr"; label: root.tr("ocrCleanup"); checked: root.usageDraft.ocr_cleanup; Layout.fillWidth: true; onClicked: root.changeUsage("ocr_cleanup",!checked) }
         NativeButton {

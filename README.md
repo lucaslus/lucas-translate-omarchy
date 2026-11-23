@@ -94,7 +94,7 @@ Main features:
 - Selection and input translation (`Super+Ctrl+Shift+D` / `Super+Ctrl+Shift+I`) with per-language target rules and per-provider retry.
 - Built-in Youdao dictionary (UK/US phonetics and audio), free Bing and DeepL translation, plus DeepL API and OpenAI-compatible or local Ollama streaming.
 - Local screenshot OCR via `tesseract` to translate (`Super+Ctrl+Shift+S`) or copy text straight to the clipboard (`Super+Ctrl+Shift+C`).
-- Optional floating screenshot annotation window (`Super+Ctrl+Shift+P`) with a theme-colored bottom action bar for Confirm Copy (`Enter`) and Cancel (`Esc`).
+- Optional floating screenshot annotation window (`Super+Ctrl+Shift+P`) with a theme-colored bottom action bar for Confirm & Copy (`Enter`) and Cancel (`Esc`).
 - Searchable local history, favorites, draggable provider order, and configurable shortcuts.
 
 No sudo or pkexec is required. The installer runs as the desktop user only and refuses to run as root or while locked.

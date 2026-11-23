@@ -64,13 +64,31 @@ index ca4631f..0afb551 100644
 +  color: @lucas_accent_fg;
 +}
 diff --git i/src/main.rs w/src/main.rs
-index e66aa68..906eb90 100644
+index e66aa68..0ad6fc4 100644
 --- i/src/main.rs
 +++ w/src/main.rs
-@@ -803,10 +803,95 @@ impl App {
+@@ -803,10 +803,113 @@ impl App {
          }
      }
  
++    fn is_zh_ui() -> bool {
++        if let Ok(explicit) = std::env::var("LUCAS_UI_LANG") {
++            let trimmed = explicit.trim().to_ascii_lowercase();
++            if !trimmed.is_empty() && trimmed != "auto" {
++                return trimmed.starts_with("zh");
++            }
++        }
++        ["LC_ALL", "LC_MESSAGES", "LANG"]
++            .into_iter()
++            .find_map(|name| {
++                std::env::var(name)
++                    .ok()
++                    .map(|value| value.trim().to_ascii_lowercase())
++                    .filter(|value| !value.is_empty())
++            })
++            .is_some_and(|locale| locale.starts_with("zh"))
++    }
++
 +    fn omarchy_theme_css() -> Option<String> {
 +        let state_dir = std::env::var_os("XDG_STATE_HOME")
 +            .map(std::path::PathBuf::from)
@@ -163,7 +181,7 @@ index e66aa68..906eb90 100644
          let css_provider_override = if let Some(overrides) = read_css_overrides() {
              let css_provider2 = CssProvider::new();
              css_provider2.load_from_data(&overrides);
-@@ -827,13 +912,20 @@ impl App {
+@@ -827,13 +930,20 @@ impl App {
                      &css_provider,
                      gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
                  );
@@ -186,7 +204,7 @@ index e66aa68..906eb90 100644
                      );
                  }
              }
-@@ -1454,6 +1546,21 @@ impl Component for App {
+@@ -1454,6 +1564,21 @@ impl Component for App {
          sender: ComponentSender<Self>,
      ) -> ComponentParts<Self> {
          Self::apply_style();
@@ -208,13 +226,28 @@ index e66aa68..906eb90 100644
          let AppInit {
              image,
              initial_toast,
-@@ -1789,6 +1896,59 @@ impl Component for App {
+@@ -1789,6 +1914,74 @@ impl Component for App {
              .build();
          cycle_toast_revealer.set_child(Some(&cycle_toast_label));
          overlay.add_overlay(&cycle_toast_revealer);
 +
 +        // Dedicated floating Cancel / Confirm action pill centered near the bottom edge
 +        // so clipboard confirmation stays unmistakable and separate from drawing tools.
++        let (cancel_label, cancel_tooltip, confirm_label, confirm_tooltip) = if Self::is_zh_ui() {
++            (
++                "取消 (Esc)",
++                "取消：丢弃截图 (Esc)",
++                "确认复制 (Enter)",
++                "确认：复制到剪贴板并关闭 (Enter)",
++            )
++        } else {
++            (
++                "Cancel (Esc)",
++                "Cancel and discard screenshot (Esc)",
++                "Confirm & Copy (Enter)",
++                "Confirm: copy to clipboard and close (Enter)",
++            )
++        };
 +        let lucas_action_bar = gtk::Box::builder()
 +            .orientation(gtk::Orientation::Horizontal)
 +            .spacing(6)
@@ -229,10 +262,10 @@ index e66aa68..906eb90 100644
 +            .spacing(5)
 +            .build();
 +        cancel_content.append(&gtk::Image::from_icon_name("dismiss-regular"));
-+        cancel_content.append(&gtk::Label::new(Some("取消 (Esc)")));
++        cancel_content.append(&gtk::Label::new(Some(cancel_label)));
 +        let cancel_button = gtk::Button::builder()
 +            .child(&cancel_content)
-+            .tooltip_text("取消：丢弃截图 (Esc)")
++            .tooltip_text(cancel_tooltip)
 +            .focus_on_click(false)
 +            .can_focus(false)
 +            .build();
@@ -249,10 +282,10 @@ index e66aa68..906eb90 100644
 +            .spacing(5)
 +            .build();
 +        confirm_content.append(&gtk::Image::from_icon_name("checkmark-regular"));
-+        confirm_content.append(&gtk::Label::new(Some("确认复制 (Enter)")));
++        confirm_content.append(&gtk::Label::new(Some(confirm_label)));
 +        let confirm_button = gtk::Button::builder()
 +            .child(&confirm_content)
-+            .tooltip_text("确认：复制到剪贴板并关闭 (Enter)")
++            .tooltip_text(confirm_tooltip)
 +            .focus_on_click(false)
 +            .can_focus(false)
 +            .build();

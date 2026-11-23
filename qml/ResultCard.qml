@@ -57,8 +57,8 @@ Ui.BorderSurface {
             Layout.fillWidth: true; spacing: Commons.Style.spacing.sm
             Repeater {
                 model: root.card.dict ? [
-                    {label:"UK", phonetic:root.card.dict.uk_phonetic, url:root.card.dict.uk_speech},
-                    {label:"US", phonetic:root.card.dict.us_phonetic, url:root.card.dict.us_speech}
+                    {label:root.service.tr("uk"), phonetic:root.card.dict.uk_phonetic, url:root.card.dict.uk_speech},
+                    {label:root.service.tr("us"), phonetic:root.card.dict.us_phonetic, url:root.card.dict.us_speech}
                 ].filter(function(value) { return !!value.phonetic }) : []
                 NativeButton { foreground: Commons.Color.popups.text;
                     required property var modelData
@@ -102,8 +102,8 @@ Ui.BorderSurface {
             visible: !root.card.pending && !root.card.error
             Layout.fillWidth: true
             NativeText {
-                text: (root.card.detected_from || "") + " → " + (root.card.detected_to || "")
-                font.pixelSize: Commons.Style.font.caption; secondary: true; Layout.fillWidth: true
+                text: Strings.languageName(root.card.detected_from, root.service.language) + " → " + Strings.languageName(root.card.detected_to, root.service.language)
+                font.pixelSize: Commons.Style.font.caption; secondary: true; elide: Text.ElideRight; Layout.fillWidth: true
             }
             NativeIconButton { objectName: "copy." + root.card.service; name: root.copied ? "check" : "copy"; tooltipText: root.service.tr(root.copied ? "copied" : "copy"); onClicked: root.service.copy(Model.translated(root.card),function(ok) { if (ok) { root.copied = true; copyReset.restart() } }) }
             NativeIconButton { objectName: "favorite." + root.card.service; name: "favorites"; filled: !!root.service.favoriteStates[root.service.favoriteKey(root.card)]; enabled: !root.service.favoritePending[root.service.favoriteKey(root.card)]; tooltipText: root.service.tr(filled ? "remove" : "favorite"); onClicked: root.service.favorite(root.card) }

@@ -6,6 +6,7 @@ import qs.Commons as Commons
 import "Native/qml" as Native
 import "Native/qml/Theme.js" as Theme
 import "Native/qml/Model.js" as Model
+import "Native/qml/Strings.js" as Strings
 
 ShellRoot {
     id: root
@@ -166,7 +167,23 @@ ShellRoot {
         {name:"disabled-service-drag-and-keyboard-order-save",run:function() { var original=service.serviceOrder.slice(); click("service.deepl"); waitFor(function() { return !service.settings.services.deepl },"Disable failed"); item("settingsView").contentY=0; driver.wait(20); dragService("DeepLFree",0); waitFor(function() { return !service.orderSaving },"Disabled service order did not save"); check(service.serviceOrder[0]==="DeepLFree" && !service.settings.services.deepl,"Dragging a disabled service enabled it"); click("service.deepl"); waitFor(function() { return service.settings.services.deepl },"Enable failed"); check(service.serviceOrder[0]==="DeepLFree","Re-enabling lost position"); var handle=item("service.drag.DeepLFree"); handle.forceActiveFocus(); driver.keyClick(Qt.Key_Down,Qt.NoModifier,0); waitFor(function() { return !service.orderSaving },"Keyboard order did not save"); check(service.serviceOrder[1]==="DeepLFree" && handle.activeFocus,"Keyboard reorder lost position or focus"); service.reorderServices(original); waitFor(function() { return !service.orderSaving },"Restore failed") }},
         {name:"drag-order-keeps-other-unsaved-settings",run:function() { var settings=item("settingsView"), original=service.serviceOrder.slice(), savedDays=service.settings.usage.history_days; settings.changeUsage("history_days",7); settings.contentY=0; driver.wait(20); dragService("Bing",0); waitFor(function() { return !service.orderSaving },"Order save stuck"); check(settings.usageDirty && settings.usageDraft.history_days===7 && service.settings.usage.history_days===savedDays,"Order save overwrote or saved another draft"); settings.usageDirty=false; settings.loadUsage(); service.reorderServices(original); waitFor(function() { return !service.orderSaving },"Restore failed") }},
         {name:"usage-history-policy-save",run:function() { var settings=item("settingsView"), previous=service.serviceOrder.slice(); click("usage.history"); choose("usage.days","30"); choose("usage.limit","1000"); click("usage.save"); waitFor(function() { return !settings.saving },"Usage save stuck"); check(JSON.stringify(service.settings.usage.service_order)===JSON.stringify(previous) && !service.settings.usage.history_enabled && service.settings.usage.history_days===30 && service.settings.usage.history_limit===1000,"Usage policy not saved") }},
-        {name:"interface-language-zh-and-en",run:function() { choose("interfaceLanguage","zh-CN"); waitFor(function() { return service.language === "zh-CN" },"Chinese not selected"); check(item("tab.translate").tooltipText === "翻译","Tabs not localized"); choose("interfaceLanguage","en"); waitFor(function() { return service.language === "en" },"English not restored") }},
+        {name:"interface-language-zh-and-en",run:function() {
+            var savedShortcuts = service.shortcuts
+            service.shortcuts = {shortcuts:savedShortcuts.shortcuts,conflicts:{input:"Super+Q 与「Close window」冲突，请重新设置"}}
+            driver.wait(20)
+            check(item("shortcut.conflict.input").text === 'Super+Q conflicts with "Close window". Choose a different shortcut.',"Shortcut conflict not localized in English: " + item("shortcut.conflict.input").text)
+            check(item("usage.days").options[1].label === "7 days","Retention days not localized in English")
+            check(Strings.message("启用 AI 前请填写 Base URL 和模型","en") === "Enter a Base URL and model before enabling AI.","Backend config error swallowed in English")
+            check(Strings.message("lucas-screenshot-editor is unavailable","zh-CN") === "未找到截图标注编辑器（lucas-screenshot-editor）。","Desktop error not localized in Chinese")
+            check(Strings.languageName("en","zh-CN") === "英语" && Strings.languageName("zh-Hans","en") === "Simplified Chinese","Language pair names not localized")
+            choose("interfaceLanguage","zh-CN"); waitFor(function() { return service.language === "zh-CN" },"Chinese not selected")
+            check(item("tab.translate").tooltipText === "翻译","Tabs not localized")
+            check(item("usage.days").options[1].label === "7 天","Retention days not localized in Chinese")
+            check(item("shortcut.conflict.input").text === "Super+Q 与「Close window」冲突，请重新设置","Shortcut conflict broken in Chinese")
+            choose("interfaceLanguage","en"); waitFor(function() { return service.language === "en" },"English not restored")
+            check(item("tab.translate").tooltipText === "Translate","Tabs not restored to English")
+            service.shortcuts = savedShortcuts
+        }},
         {name:"layout-icons-equal-and-language-between-input-results",run:function() { page("translate"); var input=item("translationInput"); var language=item("sourceLanguage"); var result=item("result.Bing"); check(input.mapToItem(panel,0,input.height).y <= language.mapToItem(panel,0,0).y,"Language selector is above input"); var icons=["tab.translate","tab.history","tab.favorites","tab.settings","panelClose"].map(item); check(icons.every(function(icon) { return icon.width===icons[0].width && icon.height===icons[0].height }),"Icon buttons have inconsistent sizing") }},
         {name:"system-editor-handled-without-native-panel-or-translation",run:function() { var before=rpc("tests.state").counts.translate; var id=service.request("capture",{action:"annotate"}); check(service.pending[id].deadline===0,"Interactive editor has a forced deadline"); service.expire(); check(!!service.pending[id],"User-paced editor expired"); waitFor(function() { return !service.pending[id] },"System editor result missing"); check(controller.page==="translate" && rpc("tests.state").counts.translate===before,"Editor opened native annotation or translated") }},
         {name:"capture-cancel-preserves-input",run:function() { page("translate"); service.text="retained"; rpc("tests.mode",{mode:"cancel_capture"}); service.capture("screenshot"); waitFor(function() { return !service.captureBusy },"Capture stayed busy"); check(service.text === "retained","Cancelled capture changed text"); rpc("tests.mode",{mode:""}) }},

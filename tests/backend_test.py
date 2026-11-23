@@ -62,7 +62,7 @@ class NativeBackend(unittest.TestCase):
             'hyprctl': selection_tools.HYPRCTL,
             'slurp': 'print("0,0 32x32")',
             'omarchy': 'import os,sys; from pathlib import Path; p=Path(os.environ["OMARCHY_SCREENSHOT_DIR"])/"system.png"; p.write_bytes(b"system-image"); print(p)',
-            'lucas-screenshot-editor': 'import os,sys,json; from pathlib import Path; p=Path(sys.argv[sys.argv.index("--filename")+1]); Path(os.environ["HOME"],"editor.json").write_text(json.dumps({"args":sys.argv[1:],"path":str(p)})); Path(os.environ["HOME"],"clipboard").write_bytes(p.read_bytes())',
+            'lucas-screenshot-editor': 'import os,sys,json; from pathlib import Path; p=Path(sys.argv[sys.argv.index("--filename")+1]); Path(os.environ["HOME"],"editor.json").write_text(json.dumps({"args":sys.argv[1:],"path":str(p),"ui_lang":os.environ.get("LUCAS_UI_LANG")})); Path(os.environ["HOME"],"clipboard").write_bytes(p.read_bytes())',
 
             'grim': 'from pathlib import Path; import sys; Path(sys.argv[-1]).write_bytes(b"test-image")',
             'tesseract': 'print("recognized text")',
@@ -341,6 +341,16 @@ class NativeBackend(unittest.TestCase):
         editor = json.loads((self.home/'editor.json').read_text())
         self.assertEqual((self.home/'clipboard').read_bytes(), b'omasnap-image')
         self.assertFalse(Path(editor['path']).exists())
+
+    def test_system_editor_receives_ui_language_preference(self):
+        self.call('preferences.save', {'language': 'zh-CN'})
+        self.call('capture', {'action': 'annotate'})
+        editor = json.loads((self.home/'editor.json').read_text())
+        self.assertEqual(editor['ui_lang'], 'zh-CN')
+        self.call('preferences.save', {'language': 'en'})
+        self.call('capture', {'action': 'annotate'})
+        editor = json.loads((self.home/'editor.json').read_text())
+        self.assertEqual(editor['ui_lang'], 'en')
 
 
 if __name__ == '__main__':

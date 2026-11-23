@@ -9,6 +9,46 @@ use tokio::process::Command;
 
 static CAPTURING: AtomicBool = AtomicBool::new(false);
 
+fn is_zh_locale(value: &str) -> bool {
+    value.trim().to_ascii_lowercase().starts_with("zh")
+}
+
+fn effective_ui_language_for(
+    preference: Option<&str>,
+    lc_all: Option<&str>,
+    lc_messages: Option<&str>,
+    lang: Option<&str>,
+) -> &'static str {
+    match preference.map(str::trim) {
+        Some("zh-CN") => return "zh-CN",
+        Some("en") => return "en",
+        _ => {}
+    }
+    let locale = [lc_all, lc_messages, lang]
+        .into_iter()
+        .flatten()
+        .map(str::trim)
+        .find(|value| !value.is_empty());
+    if locale.is_some_and(is_zh_locale) {
+        "zh-CN"
+    } else {
+        "en"
+    }
+}
+
+fn effective_ui_language() -> &'static str {
+    let pref = crate::config::preferences().ok().map(|p| p.language);
+    let lc_all = std::env::var("LC_ALL").ok();
+    let lc_messages = std::env::var("LC_MESSAGES").ok();
+    let lang = std::env::var("LANG").ok();
+    effective_ui_language_for(
+        pref.as_deref(),
+        lc_all.as_deref(),
+        lc_messages.as_deref(),
+        lang.as_deref(),
+    )
+}
+
 fn resolve_screenshot_editor() -> PathBuf {
     let user_editor = std::env::var_os("HOME")
         .map(|home| PathBuf::from(home).join(".local/bin/lucas-screenshot-editor"))
@@ -231,6 +271,7 @@ pub async fn capture(action: &str, source: &Value) -> Result<Value, String> {
         // Editing is user-paced. Keep the image alive until the editor closes;
         // backend shutdown drops and kills the child without leaking the file.
         let status = Command::new(resolve_screenshot_editor())
+            .env("LUCAS_UI_LANG", effective_ui_language())
             .args(["--title", "Lucas Screenshot", "--filename"])
             .arg(&path)
             .args([
@@ -357,5 +398,33 @@ mod tests {
         // Multiple files without explicit stdout rejected
         std::fs::write(dir.path().join("second.png"), b"png").unwrap();
         assert!(resolve_saved_capture(b"", dir.path()).is_err());
+    }
+
+    #[test]
+    fn effective_ui_language_follows_preference_then_locale() {
+        assert_eq!(
+            effective_ui_language_for(Some("zh-CN"), None, None, Some("en_US.UTF-8")),
+            "zh-CN"
+        );
+        assert_eq!(
+            effective_ui_language_for(Some("en"), Some("zh_CN.UTF-8"), None, None),
+            "en"
+        );
+        assert_eq!(
+            effective_ui_language_for(Some("auto"), None, None, Some("zh_CN.UTF-8")),
+            "zh-CN"
+        );
+        assert_eq!(
+            effective_ui_language_for(Some("auto"), None, Some("zh_TW.UTF-8"), Some("en_US.UTF-8")),
+            "zh-CN"
+        );
+        assert_eq!(
+            effective_ui_language_for(Some("auto"), Some("en_US.UTF-8"), None, Some("zh_CN.UTF-8")),
+            "en"
+        );
+        assert_eq!(
+            effective_ui_language_for(None, None, None, Some("en_US.UTF-8")),
+            "en"
+        );
     }
 }
