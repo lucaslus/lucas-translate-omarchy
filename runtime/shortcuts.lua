@@ -23,6 +23,13 @@ for action, description in pairs(actions) do
   end
 end
 
+-- Keep the dedicated screenshot editor floating and centered even after Omarchy
+-- stopped bundling default window rules for Tensaku.
+o.window({ class = "dev.tensaku.Tensaku", title = "Lucas Screenshot" }, {
+  float = true,
+  center = true,
+})
+
 -- Preserve the system editor's previous outside-click cancellation.
 local function dismiss_screenshot_editor()
   local cursor = hl.get_cursor_pos()

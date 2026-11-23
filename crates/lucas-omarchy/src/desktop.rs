@@ -1,5 +1,6 @@
 //! Wayland operations live outside the shared Shell process.
 use serde_json::{json, Value};
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -7,6 +8,107 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
 
 static CAPTURING: AtomicBool = AtomicBool::new(false);
+
+fn resolve_screenshot_editor() -> PathBuf {
+    let user_editor = std::env::var_os("HOME")
+        .map(|home| PathBuf::from(home).join(".local/bin/lucas-screenshot-editor"))
+        .filter(|path| is_executable_file(path));
+    if let Some(path_editor) = find_in_path("lucas-screenshot-editor") {
+        let is_system_dir = path_editor
+            .parent()
+            .is_some_and(|dir| dir == Path::new("/usr/bin") || dir == Path::new("/usr/local/bin"));
+        if is_system_dir {
+            if let Some(local) = user_editor {
+                return local;
+            }
+        }
+        return path_editor;
+    }
+    user_editor.unwrap_or_else(|| PathBuf::from("lucas-screenshot-editor"))
+}
+
+fn is_executable_file(path: &Path) -> bool {
+    if !path.is_file() {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::metadata(path)
+            .map(|m| m.permissions().mode() & 0o111 != 0)
+            .unwrap_or(false)
+    }
+    #[cfg(not(unix))]
+    {
+        true
+    }
+}
+
+fn find_in_path(name: &str) -> Option<PathBuf> {
+    let path = std::env::var_os("PATH")?;
+    for dir in std::env::split_paths(&path) {
+        let candidate = dir.join(name);
+        if is_executable_file(&candidate) {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+fn use_direct_omasnap() -> bool {
+    let Some(omarchy) = find_in_path("omarchy") else {
+        return false;
+    };
+    if find_in_path("omasnap").is_none() {
+        return false;
+    }
+    let Some(dir) = omarchy.parent() else {
+        return false;
+    };
+    std::fs::read_to_string(dir.join("omarchy-capture-screenshot"))
+        .map(|script| script.contains("omasnap"))
+        .unwrap_or(false)
+}
+
+fn resolve_saved_capture(stdout: &[u8], dir: &Path) -> Result<Option<PathBuf>, String> {
+    let directory =
+        std::fs::canonicalize(dir).map_err(|_| "Capture directory is unavailable".to_string())?;
+    let selected = std::str::from_utf8(stdout)
+        .map_err(|_| "Invalid screenshot path".to_string())?
+        .trim();
+    if !selected.is_empty() {
+        let path = std::fs::canonicalize(selected)
+            .map_err(|_| "Screenshot file is unavailable".to_string())?;
+        if !path.starts_with(&directory) || !path.is_file() {
+            return Err("Invalid screenshot path".into());
+        }
+        return Ok(Some(path));
+    }
+    let mut files = Vec::new();
+    let entries = std::fs::read_dir(&directory)
+        .map_err(|_| "Capture directory is unavailable".to_string())?;
+    for entry in entries {
+        let entry = entry.map_err(|_| "Capture directory is unavailable".to_string())?;
+        let file_type = entry
+            .file_type()
+            .map_err(|_| "Invalid screenshot path".to_string())?;
+        if file_type.is_file() {
+            files.push(entry.path());
+        }
+    }
+    match files.as_slice() {
+        [] => Ok(None),
+        [single] => {
+            let path = std::fs::canonicalize(single)
+                .map_err(|_| "Screenshot file is unavailable".to_string())?;
+            if !path.starts_with(&directory) || !path.is_file() {
+                return Err("Invalid screenshot path".into());
+            }
+            Ok(Some(path))
+        }
+        _ => Err("Invalid screenshot path".into()),
+    }
+}
 
 async fn output(command: &mut Command, seconds: u64) -> Result<std::process::Output, String> {
     command.kill_on_drop(true).stdin(Stdio::null());
@@ -99,30 +201,36 @@ pub async fn capture(action: &str, source: &Value) -> Result<Value, String> {
     }
     let temporary = tempfile::tempdir().map_err(|_| "Cannot create capture directory")?;
     if action == "annotate" {
-        let shot = output(
-            Command::new("omarchy")
-                .args(["capture", "screenshot", "region", "save"])
-                .env("OMARCHY_SCREENSHOT_DIR", temporary.path()),
-            120,
-        )
-        .await?;
+        // Newer Omarchy delegates `omarchy capture screenshot` to `omasnap --notify`,
+        // which writes into OMASNAP_SCREENSHOT_DIR with empty stdout and emits a toast
+        // pointing at our temporary file. Invoke `omasnap region --save` directly when
+        // detected so the system picker runs silently and hands the file to our editor.
+        let shot = if use_direct_omasnap() {
+            output(
+                Command::new("omasnap")
+                    .args(["region", "--save"])
+                    .env("OMASNAP_SCREENSHOT_DIR", temporary.path()),
+                120,
+            )
+            .await?
+        } else {
+            output(
+                Command::new("omarchy")
+                    .args(["capture", "screenshot", "region", "save"])
+                    .env("OMARCHY_SCREENSHOT_DIR", temporary.path()),
+                120,
+            )
+            .await?
+        };
         if !shot.status.success() {
             return Err("System screenshot capture failed".into());
         }
-        let selected = String::from_utf8(shot.stdout).map_err(|_| "Invalid screenshot path")?;
-        let selected = selected.trim();
-        if selected.is_empty() {
+        let Some(path) = resolve_saved_capture(&shot.stdout, temporary.path())? else {
             return Ok(json!({"cancelled":true}));
-        }
-        let path = std::fs::canonicalize(selected).map_err(|_| "Screenshot file is unavailable")?;
-        let directory = std::fs::canonicalize(temporary.path())
-            .map_err(|_| "Capture directory is unavailable")?;
-        if !path.starts_with(&directory) || !path.is_file() {
-            return Err("Invalid screenshot path".into());
-        }
+        };
         // Editing is user-paced. Keep the image alive until the editor closes;
         // backend shutdown drops and kills the child without leaking the file.
-        let status = Command::new("lucas-screenshot-editor")
+        let status = Command::new(resolve_screenshot_editor())
             .args(["--title", "Lucas Screenshot", "--filename"])
             .arg(&path)
             .args([
@@ -215,5 +323,39 @@ pub async fn speak(url: &str) -> Result<Value, String> {
         Ok(json!({}))
     } else {
         Err("Pronunciation playback failed".into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_saved_capture_handles_stdout_and_silent_omasnap_saves() {
+        let dir = tempfile::tempdir().unwrap();
+        // Empty dir + empty stdout => cancelled
+        assert_eq!(resolve_saved_capture(b"", dir.path()).unwrap(), None);
+
+        // Single file saved silently (omasnap --save)
+        let saved = dir.path().join("screenshot-2026-11-23.png");
+        std::fs::write(&saved, b"png").unwrap();
+        let expected = std::fs::canonicalize(&saved).unwrap();
+        assert_eq!(
+            resolve_saved_capture(b"", dir.path()).unwrap(),
+            Some(expected.clone())
+        );
+
+        // Explicit stdout path inside temp dir
+        assert_eq!(
+            resolve_saved_capture(expected.to_string_lossy().as_bytes(), dir.path()).unwrap(),
+            Some(expected)
+        );
+
+        // Outside path rejected
+        assert!(resolve_saved_capture(b"/etc/passwd", dir.path()).is_err());
+
+        // Multiple files without explicit stdout rejected
+        std::fs::write(dir.path().join("second.png"), b"png").unwrap();
+        assert!(resolve_saved_capture(b"", dir.path()).is_err());
     }
 }

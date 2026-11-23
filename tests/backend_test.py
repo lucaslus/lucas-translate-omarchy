@@ -333,6 +333,15 @@ class NativeBackend(unittest.TestCase):
         self.assertFalse((self.home/'editor.json').exists())
         self.assertFalse((self.home/'clipboard').exists())
 
+    def test_system_picker_without_stdout_uses_saved_capture(self):
+        picker = self.home/'bin/omarchy'
+        picker.write_text('#!/usr/bin/env python3\nimport os; from pathlib import Path\n(Path(os.environ["OMARCHY_SCREENSHOT_DIR"])/"screenshot-omasnap.png").write_bytes(b"omasnap-image")\n')
+        result = self.call('capture',{'action':'annotate'})
+        self.assertEqual(result, {'action':'annotate','handled':True})
+        editor = json.loads((self.home/'editor.json').read_text())
+        self.assertEqual((self.home/'clipboard').read_bytes(), b'omasnap-image')
+        self.assertFalse(Path(editor['path']).exists())
+
 
 if __name__ == '__main__':
     unittest.main()

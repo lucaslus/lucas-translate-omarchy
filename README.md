@@ -2,51 +2,67 @@
 
 [![Native checks](https://github.com/lucaslus/lucas-translate-omarchy/actions/workflows/omarchy-native.yml/badge.svg)](https://github.com/lucaslus/lucas-translate-omarchy/actions/workflows/omarchy-native.yml)
 
-**Omarchy 原生划词翻译、词典与本地 OCR，界面跟随系统主题。**
+Omarchy 桌面上的划词翻译、查词、本地 OCR 与悬浮截图标注工具。配色、圆角和字体自动跟随当前 Omarchy 主题。
 
-界面以 QML / Qt Quick 插件运行在 Omarchy Shell 中，独立的 Rust 后端负责翻译、词典、历史、凭据和本地 OCR。本仓库可以独立构建、安装和维护，无需检出原仓库或安装 Tauri 桌面版。
+![Lucas Translate preview](preview.png)
 
-## 适用平台与仓库关系
+## 核心功能
 
-| 使用环境 | 对应项目 | 技术栈 |
+### 划词与输入翻译
+选中任意文字按 `Super+Ctrl+Shift+D` 直接翻译，没有选区时打开空白输入框。支持按语言自动选择目标语种，单个渠道超时或报错可以单独重试。划词优先读取无障碍选区，不支持时临时读取剪贴板并自动还原原内容。
+
+### 词典、免费翻译与 AI 流式输出
+内置有道词典（带英美音标与真人发音）、Bing 和 DeepL 免费翻译。也可以在设置页填入 DeepL 官方 API、OpenAI 兼容接口或本地 Ollama，AI 译文支持边生成边显示和随时取消。五个服务支持直接拖拽排序。
+
+### 本地截图 OCR
+按 `Super+Ctrl+Shift+S` 框选屏幕文字，在本地识别后直接翻译。按 `Super+Ctrl+Shift+C` 只把识别出的文字复制到剪贴板，不弹窗也不联网发送图片。
+
+### 悬浮截图标注
+按 `Super+Ctrl+Shift+P` 框选屏幕后弹出居中的悬浮编辑窗口，支持画框、箭头、马赛克和文字标注。底部居中的悬浮按钮条自动跟随当前 Omarchy 主题色，点「确认复制 (Enter)」或按 `Enter` 把结果复制到剪贴板并关闭；点「取消 (Esc)」、按 `Esc` 或点击窗口外部直接丢弃，不改原剪贴板，临时截图关闭即删。
+
+### 历史、收藏与主题跟随
+翻译记录和收藏保存在本地，支持关键词搜索、展开查看全部引擎结果和一键重译。切换 Omarchy 主题时窗口实时生效，快捷键和历史保留上限都可以在设置页调整。
+
+## 常用快捷键
+
+安装后可通过顶栏图标打开，或使用以下默认快捷键（可在设置页自定义）：
+
+| 功能 | 默认快捷键 | 命令 |
 | --- | --- | --- |
-| 提供兼容插件运行时的 Omarchy / Hyprland / Wayland 桌面 | 本仓库 `lucas-translate-omarchy` | QML / Qt Quick + Rust |
-| macOS、Windows、普通 Linux 桌面 | [Lucas Translate 桌面版](https://github.com/lucaslus/luca-translate) | Tauri 2 + HTML / CSS / JavaScript + Rust |
+| 打开翻译面板 | 点击顶栏图标 | `lucas-translate-native --show` |
+| 新建空白输入 | `Super+Ctrl+Shift+I` | `lucas-translate-native --input` |
+| 显示 / 隐藏面板 | `Super+Ctrl+Shift+T` | `lucas-translate-native --toggle` |
+| 划词翻译 | `Super+Ctrl+Shift+D` | `lucas-translate-native --selection` |
+| 截图识别并翻译 | `Super+Ctrl+Shift+S` | `lucas-translate-native --screenshot` |
+| 截图 OCR 复制文字 | `Super+Ctrl+Shift+C` | `lucas-translate-native --ocr` |
+| 悬浮截图标注 | `Super+Ctrl+Shift+P` | `lucas-translate-native --annotate` |
 
-本项目从原仓库的 Omarchy Native 部分迁出，保留了相关 Git 历史。插件 ID 仍为 `lucas.translate`，已有原生安装可通过本仓库的安装器更新。
+面板内按 `Enter` 翻译，`Shift+Enter` 换行，`Esc` 取消并隐藏，`Ctrl+L` 全选输入框，`Ctrl+Up/Down` 切换结果，`Ctrl+Shift+C` 复制当前译文。
 
-两个仓库各自包含一份 `lucas-core` 源码；共享核心的修复需要有意识地同步。迁移来源、兼容性和维护边界见 [迁移说明](docs/MIGRATION.md)。
+## 安装前需要准备什么
 
-## 功能
+请在已解锁的 Omarchy 桌面上运行，不要在锁屏状态下安装或更新。
 
-- 输入翻译与划词翻译，支持语言路由和按服务重试。
-- 有道词典、音标与发音，Bing、DeepL 免费通道。
-- DeepL 官方 API、OpenAI 兼容服务与本地 AI 服务；支持流式响应和取消。
-- 本地截图 OCR：截图翻译，或将识别文字复制到剪贴板。
-- 历史与收藏：搜索、复制、分页和重新翻译。
-- 可调整服务顺序和桌面快捷键；窗口、字体和颜色跟随 Omarchy。
-- 可选截图标注编辑器。
+- 基础运行：`python3`、`wl-clipboard`，以及 Omarchy 自带的 `omarchy`、`omarchy-shell`、`hyprctl`
+- 截图 OCR（可选）：`grim`、`slurp`、`tesseract` 及中英文语言包（`eng`、`chi_sim`）
+- 词典发音（可选）：`mpv`
+- API 密钥保存（可选）：已解锁的系统密钥环（Secret Service）
+- 截图标注（可选）：`lucas-screenshot-editor`（构建方式见 [开发文档](docs/DEVELOPMENT.md#optional-screenshot-editor)）
+- 仅在从源码编译时需要：`git`、Rust / Cargo、C/C++ 编译工具、`pkg-config`、`libdbus` 开发包
 
-## 安装前准备
+## 安装与更新
 
-需要已启动且已解锁的 Omarchy 图形会话，Shell 必须提供服务、面板和栏组件插件入口，以及 `Commons`、`Ui.BorderSurface`、`Ui.Dropdown`、`Ui.TextField`、`Ui.Toggle` 等组件。安装器会检查 Shell 和活动显示器，并拒绝在锁屏状态下修改插件。
+### 方式一：下载预编译包（无需安装 Rust）
 
-| 用途 | 依赖 |
-| --- | --- |
-| 安装、快捷键和剪贴板 | Python 3、`wl-clipboard`，以及可用的 `omarchy`、`omarchy-shell`、`hyprctl` |
-| 从源码构建后端 | Git、Rust stable / Cargo、C/C++ 编译工具、`pkg-config`、libdbus 开发文件 |
-| 截图与本地 OCR | `grim`、`slurp`、`tesseract`，英语与简体中文语言数据（`eng`、`chi_sim`） |
-| 保存 API 密钥 | 已解锁的 Secret Service 密钥环 |
-| 词典发音 | `mpv` |
-| 截图标注 | `lucas-screenshot-editor`；构建步骤见 [开发文档](docs/DEVELOPMENT.md#optional-screenshot-editor) |
+从 [Releases](https://github.com/lucaslus/lucas-translate-omarchy/releases) 下载对应架构的压缩包（尚无正式 Release 时可从最近一次通过的 [Native checks](https://github.com/lucaslus/lucas-translate-omarchy/actions/workflows/omarchy-native.yml) 下载 `omarchy-native` 产物并先解压外层 ZIP）：
 
-翻译服务还需要访问对应的网络服务；AI 服务的地址、模型与密钥，以及 DeepL API 的密钥，在应用设置中配置。
+```sh
+tar -xzf lucas-translate-omarchy-0.1.0-x86_64.tar.gz
+cd lucas-translate-omarchy
+python3 scripts/install-omarchy-native.py --binary bin/lucas-translate-omarchy-backend
+```
 
-## 安装
-
-### 从源码安装
-
-准备好上述编译依赖后，在已解锁的 Omarchy 桌面中，以当前桌面用户运行：
+### 方式二：从源码安装
 
 ```sh
 git clone https://github.com/lucaslus/lucas-translate-omarchy.git
@@ -54,143 +70,43 @@ cd lucas-translate-omarchy
 python3 scripts/install-omarchy-native.py
 ```
 
-安装器会自动编译原生 Rust 后端，备份受管理的桌面文件，安装插件、后端和启动器，添加栏组件并配置六个桌面快捷键。它会验证插件发现、后端就绪、实际加载的界面版本和 Hyprland 配置；失败时尝试恢复备份。遇到快捷键冲突时，对应操作会留空，并在设置中显示原因。
+安装器会先备份将要改动的桌面文件再执行安装，失败时自动回滚；遇到快捷键冲突会留空并在设置页提示原因。请以普通桌面用户运行，切勿以 root 权限执行（No sudo or pkexec is required.）。如果不想让安装器修改 Hyprland 快捷键，可加上 `--without-shortcuts`。
 
-安装器使用桌面用户的配置和密钥环，**请以普通桌面用户运行，切勿以 root 权限执行**（No sudo or pkexec is required.）。如需保留现有 Hyprland 快捷键配置，可使用：
+仅运行 `omarchy plugin add` 只会下载界面文件，不会安装本地翻译服务，完整安装和升级请运行上面的安装器。源码升级只需拉取最新代码后再运行一次 `python3 scripts/install-omarchy-native.py`。
 
-```sh
-python3 scripts/install-omarchy-native.py --without-shortcuts
-```
+## 卸载与数据位置
 
-已单独构建后端时，也可传入与当前源码匹配的可执行文件：
+- 只通过 `omarchy plugin add` 安装的界面文件，直接执行 `omarchy plugin remove lucas.translate` 即可移除。
+- 通过安装器完整安装的，目前没有一键卸载脚本：先运行 `omarchy plugin disable lucas.translate`，再按安装时打印的备份目录（默认在 `~/.local/state/lucas-translate-omarchy/install-backups/`）恢复或移除相关文件，详细步骤见 [回退与卸载说明](docs/MIGRATION.md#回退与卸载)。
+- 个人配置、历史和收藏保存在 `~/.local/share/lucas-translate-omarchy/`，诊断日志在 `~/.local/state/lucas-translate-omarchy/logs/`（不记录原文、译文或密钥）。
 
-```sh
-python3 scripts/install-omarchy-native.py \
-  --binary target/release/lucas-translate-omarchy-backend
-```
-
-### 从预编译安装包安装
-
-安装包可从 [Releases](https://github.com/lucaslus/lucas-translate-omarchy/releases) 获取；尚无已发布 Release 时，可打开一次成功的 [Native checks](https://github.com/lucaslus/lucas-translate-omarchy/actions/workflows/omarchy-native.yml) 运行，下载 `omarchy-native` artifact，并先解压外层 ZIP。下载 Actions artifact 需要登录 GitHub。
-
-使用与机器架构匹配的 Linux 包；当前 CI 产物为 `x86_64`。以 `0.1.0` 包为例：
-
-```sh
-tar -xzf lucas-translate-omarchy-0.1.0-x86_64.tar.gz
-cd lucas-translate-omarchy
-python3 scripts/install-omarchy-native.py \
-  --binary bin/lucas-translate-omarchy-backend
-```
-
-安装包包含插件、后端和安装器，无需 Rust 编译器。安装时仍需要已解锁的 Omarchy 会话和相应运行依赖。
-
-`omarchy plugin add` 只克隆插件文件，不会安装 Rust 后端。完整安装与更新请使用上述安装器。
-
-## 使用
-
-安装后可通过栏组件打开，也可调用以下命令。表中的组合是初始默认值；已有自定义组合会沿用，实际分配情况以设置页为准。
-
-| 操作 | 命令 | 默认快捷键 |
-| --- | --- | --- |
-| 显示面板 | `lucas-translate-native --show` | — |
-| 新建输入 | `lucas-translate-native --input` | `Super+Ctrl+Shift+I` |
-| 显示 / 隐藏 | `lucas-translate-native --toggle` | `Super+Ctrl+Shift+T` |
-| 翻译当前选中文字 | `lucas-translate-native --selection` | `Super+Ctrl+Shift+D` |
-| 截图识别并翻译 | `lucas-translate-native --screenshot` | `Super+Ctrl+Shift+S` |
-| OCR 文字复制到剪贴板 | `lucas-translate-native --ocr` | `Super+Ctrl+Shift+C` |
-| 截图并标注 | `lucas-translate-native --annotate` | `Super+Ctrl+Shift+P` |
-
-输入框中 `Enter` 翻译，`Shift+Enter` 换行，`Escape` 取消正在进行的翻译并隐藏面板。`Ctrl+L` 聚焦并选中输入，`Ctrl+Up/Down` 切换结果，`Ctrl+Shift+C` 复制所选结果。
-
-划词读取取决于来源应用的无障碍接口或 Copy 快捷键；没有有效选区时打开空输入。Copy 回退会恢复原剪贴板内容。OCR 在本机执行；截图翻译随后会把识别文字交给启用的翻译服务，`--ocr` 仅复制识别文字。
-
-界面、输入法、划词和截图行为的完整说明见 [运行行为](docs/DEVELOPMENT.md#runtime-behavior)。
-
-## 更新、回退与卸载
-
-源码安装可在仓库中更新后重新运行安装器：
-
-```sh
-git pull --ff-only
-python3 scripts/install-omarchy-native.py
-```
-
-安装包用户下载并解压新版包，再按安装包方式运行安装器。每次更新都使用同一版本的插件与后端，并保留原生用户数据。
-
-安装结束会打印备份目录，默认位于 `~/.local/state/lucas-translate-omarchy/install-backups/`。回退和恢复旧桌面集成需要使用对应备份；当前没有自动卸载命令。备份文件与安装路径的对应关系、回退步骤及数据保留方式见 [回退与卸载说明](docs/MIGRATION.md#回退与卸载)。
-
-## 安装位置与数据
-
-下表为未自定义 XDG 环境变量时的默认路径：
-
-| 内容 | 路径 |
-| --- | --- |
-| Shell 插件 | `~/.config/omarchy/plugins/lucas.translate/` |
-| 后端与启动器 | `~/.local/bin/lucas-translate-omarchy-backend`、`lucas-translate-native`、`lucas-translate` |
-| 配置、历史与收藏 | `~/.local/share/lucas-translate-omarchy/` |
-| 诊断日志 | `~/.local/state/lucas-translate-omarchy/logs/` |
-| 安装备份 | `~/.local/state/lucas-translate-omarchy/install-backups/` |
-
-首次启动时，如果发现旧桌面版数据，会复制设置并对 SQLite 历史做快照，保留原数据。原生版使用独立的凭据命名空间；旧密钥按需复制，清除原生密钥不会删除旧桌面版凭据。诊断日志只记录允许的元数据，不记录输入、翻译内容或密钥。
-
-`lucas-translate` 启动器在 Omarchy 图形会话中打开原生版，其他 Linux 会话转交已有的系统桌面版可执行文件。
-
-## 源码目录与开发
-
-```text
-lucas-translate-omarchy/
-├── manifest.json          # Omarchy 插件清单
-├── Cargo.toml / Cargo.lock
-├── qml/                   # 界面入口、组件和 JavaScript
-├── assets/                # 提供商图标等资源
-├── runtime/               # 已安装插件使用的启动器、桥接和快捷键
-├── crates/
-│   ├── lucas-core/        # 翻译与词典核心
-│   └── lucas-omarchy/     # 原生 Rust 后端
-├── scripts/               # 构建、安装与验证工具
-├── tests/                 # Python 与 QML 测试、隔离夹具
-├── packaging/editor/      # 可选截图编辑器补丁与许可说明
-├── docs/                  # 开发、行为和迁移说明
-└── .github/workflows/     # Linux、Qt 与发布流程
-```
-
-两个 Rust crate 使用一个根 workspace、锁文件和 `target/`；构建包位于 `dist/`。源码、安装包与安装后的插件保持相同的运行时相对路径，安装器只复制运行需要的文件。
-
-```sh
-cargo build --locked
-cargo fmt --all -- --check
-cargo test --package lucas-core --locked -- --skip network
-cargo test --package lucas-translate-omarchy-backend --locked
-bash scripts/build-omarchy-native.sh
-```
-
-原生构建与完整验证请在 Linux 上进行。CI 覆盖核心、后端、快捷键、安装回滚、打包、隔离 Wayland 剪贴板、Qt 界面交互和 QML→Rust 桥接。真实桌面的焦点、物理快捷键、区域选取、在线服务和密钥环仍需在已解锁的 Omarchy 桌面实测。测试命令与发布布局见 [开发文档](docs/DEVELOPMENT.md)。
+如果你使用 macOS、Windows 或普通 Linux 桌面，请前往桌面版仓库 [lucaslus/luca-translate](https://github.com/lucaslus/luca-translate)。开发与构建说明见 [开发文档](docs/DEVELOPMENT.md)。
 
 ## 许可证
 
-本仓库使用 [MIT](LICENSE) 许可证。可选截图编辑器保留独立的 MPL-2.0 许可与补丁声明，见 [editor notices](https://github.com/lucaslus/lucas-translate-omarchy/blob/main/packaging/editor/NOTICE)。
+本仓库使用 [MIT](LICENSE) 许可证。可选截图标注编辑器基于上游 Tensaku，保留其 MPL-2.0 许可声明（[NOTICE](packaging/editor/NOTICE)）。应用图标 `assets/lucas-translate.png` 来自 [lucaslus/luca-translate](https://github.com/lucaslus/luca-translate)，同样遵循 MIT 许可。
 
-`assets/lucas-translate.png` 复用 Lucas Translate 桌面版的 [256×256 应用图标](https://github.com/lucaslus/luca-translate/blob/5ee993a33fa3104a473136ff01f1a54b9cfe2625/app/src-tauri/icons/128x128%402x.png)，适用同一份 [MIT 许可证](LICENSE)。
+## English overview
 
----
+Lucas Translate (`lucas.translate`) adds quick selection translation, dictionary lookup with phonetics and audio, local screenshot OCR, and an optional floating screenshot annotation editor to Omarchy. Its colors, corners, and fonts follow your active Omarchy theme automatically.
 
-## English Quick Guide (Omarchy Marketplace)
+Main features:
+- Selection and input translation (`Super+Ctrl+Shift+D` / `Super+Ctrl+Shift+I`) with per-language target rules and per-provider retry.
+- Built-in Youdao dictionary (UK/US phonetics and audio), free Bing and DeepL translation, plus DeepL API and OpenAI-compatible or local Ollama streaming.
+- Local screenshot OCR via `tesseract` to translate (`Super+Ctrl+Shift+S`) or copy text straight to the clipboard (`Super+Ctrl+Shift+C`).
+- Optional floating screenshot annotation window (`Super+Ctrl+Shift+P`) with a theme-colored bottom action bar for Confirm Copy (`Enter`) and Cancel (`Esc`).
+- Searchable local history, favorites, draggable provider order, and configurable shortcuts.
 
-- **Plugin ID**: `lucas.translate` (`service`, `panel`, `bar-widget`)
-- **Runtime**: Native QML / Qt Quick plugin for Omarchy Shell + standalone Rust backend (`lucas-translate-omarchy-backend`)
-- **Privileges**: No sudo or pkexec is required. Runs strictly as the desktop user and refuses to execute as root or while the desktop is locked.
-- **External Dependencies**:
-  - Core & shortcuts: `python3`, `wl-clipboard`, `omarchy`, `omarchy-shell`, `hyprctl`
-  - Build from source: `git`, Rust stable (`cargo`), C/C++ toolchain, `pkg-config`, `libdbus` development headers
-  - Local OCR (optional): `grim`, `slurp`, `tesseract` (`eng`, `chi_sim` language data)
-  - Pronunciation (optional): `mpv`; API key storage: unlocked Secret Service keyring; Screenshot annotation (optional): `lucas-screenshot-editor`
-- **Installation**:
-  - `omarchy plugin add https://github.com/lucaslus/lucas-translate-omarchy.git --enable` clones the QML plugin only and does not build or install the Rust backend.
-  - For a complete installation (or update), run the installer from a repository checkout or extracted release archive on an unlocked Omarchy desktop:
-    ```sh
-    python3 scripts/install-omarchy-native.py
-    ```
-    Pass `--without-shortcuts` to leave Hyprland keybindings untouched, or `--binary <path>` to use a prebuilt backend executable. Every existing managed file is backed up under `~/.local/state/lucas-translate-omarchy/install-backups/<timestamp>/` before modification and restored automatically on failure.
-- **Removal**:
-  - If added only via `omarchy plugin add`: run `omarchy plugin remove lucas.translate`.
-  - If installed via `scripts/install-omarchy-native.py`: disable the plugin with `omarchy plugin disable lucas.translate`, restore or remove the managed files listed in [docs/MIGRATION.md](docs/MIGRATION.md#回退与卸载) using the backup snapshot printed at install time, and run `omarchy-shell shell rescanPlugins`, `omarchy-shell shell reloadConfig`, and `hyprctl reload`. User data under `~/.local/share/lucas-translate-omarchy/` is preserved unless removed manually.
+No sudo or pkexec is required. The installer runs as the desktop user only and refuses to run as root or while locked.
+
+External dependencies: `python3`, `wl-clipboard`, `omarchy`, `omarchy-shell`, and `hyprctl` for core use; `git`, Rust (`cargo`), C/C++ build tools, `pkg-config`, and `libdbus` headers when building from source; optional `grim`, `slurp`, `tesseract` (`eng`, `chi_sim`), `mpv`, an unlocked Secret Service keyring, and `lucas-screenshot-editor`.
+
+Running `omarchy plugin add https://github.com/lucaslus/lucas-translate-omarchy.git --enable` clones the Shell plugin files only and does not install the companion backend executable. For a complete install or update, run the installer on an unlocked Omarchy desktop:
+
+```sh
+python3 scripts/install-omarchy-native.py
+```
+
+Add `--without-shortcuts` to keep your existing Hyprland keybindings, or `--binary <path>` when installing from a release archive. Every modified file is backed up under `~/.local/state/lucas-translate-omarchy/install-backups/` before installation and restored automatically if a step fails.
+
+To remove a plugin added only via `omarchy plugin add`, run `omarchy plugin remove lucas.translate`. To remove a full installation, run `omarchy plugin disable lucas.translate`, restore or remove the managed files from your install backup as listed in [docs/MIGRATION.md](docs/MIGRATION.md#回退与卸载), and reload with `omarchy-shell shell rescanPlugins`, `omarchy-shell shell reloadConfig`, and `hyprctl reload`. Your personal history and settings under `~/.local/share/lucas-translate-omarchy/` stay untouched unless you delete that folder manually.
