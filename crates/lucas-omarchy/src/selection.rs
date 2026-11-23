@@ -190,7 +190,9 @@ async fn accessible_selection_from(
                 .iter()
                 .any(|value| value == "org.a11y.atspi.Text")
         {
-            text_available = true;
+            if flags & (1 << 12) != 0 {
+                text_available = true;
+            }
             let text = zbus::Proxy::new(
                 connection,
                 name.as_str(),
@@ -297,46 +299,43 @@ async fn restore_snapshot(sources: Vec<(String, Vec<u8>)>) -> Result<(), String>
     }
 }
 
-fn copy_modifiers(class: &str) -> Option<&'static str> {
-    let class = class.to_ascii_lowercase();
-    if [
+fn is_terminal_name(name: &str) -> bool {
+    let lower = name.trim().to_ascii_lowercase();
+    [
         "ghostty",
         "com.mitchellh.ghostty",
         "alacritty",
         "kitty",
         "foot",
+        "footclient",
         "org.wezfurlong.wezterm",
+        "wezterm",
+        "wezterm-gui",
         "org.kde.konsole",
+        "konsole",
+        "terminator",
+        "tilix",
+        "gnome-terminal",
+        "gnome-terminal-server",
+        "xterm",
+        "urxvt",
+        "st",
+        "rio",
+        "contour",
     ]
-    .contains(&class.as_str())
-    {
-        return Some("CTRL+SHIFT");
+    .contains(&lower.as_str())
+}
+
+fn copy_modifiers(class: &str) -> Option<&'static str> {
+    let trimmed = class.trim();
+    if trimmed.is_empty() {
+        return None;
     }
-    // Restrict the fallback to document viewers whose Copy action requires a
-    // selection. Editors may copy the current line even with no selection.
-    ([
-        "chromium",
-        "google-chrome",
-        "firefox",
-        "org.mozilla.firefox",
-        "brave-browser",
-        "microsoft-edge",
-        "codex",
-        "chatgpt",
-        "com.google.chrome",
-        "chromium-browser",
-        "feishu",
-        "lark",
-        "com.bytedance.feishu",
-        "com.bytedance.lark",
-    ]
-    .contains(&class.as_str())
-        || class.starts_with("chrome-")
-        || class.starts_with("chromium-")
-        || class.starts_with("firefox-")
-        || class.starts_with("brave-")
-        || class.starts_with("microsoft-edge-"))
-    .then_some("CTRL")
+    if is_terminal_name(trimmed) {
+        Some("CTRL+SHIFT")
+    } else {
+        Some("CTRL")
+    }
 }
 
 fn window_copy_modifiers(
@@ -350,12 +349,116 @@ fn window_copy_modifiers(
     }) {
         return Some("CTRL+SHIFT");
     }
-    copy_modifiers(window["class"].as_str().unwrap_or("")).or_else(|| {
-        executable
-            .and_then(std::path::Path::file_name)
-            .and_then(|name| name.to_str())
-            .and_then(copy_modifiers)
-    })
+    let class = window["class"].as_str().unwrap_or("");
+    let exe_name = executable
+        .and_then(std::path::Path::file_name)
+        .and_then(|name| name.to_str())
+        .unwrap_or("");
+    if is_terminal_name(class) || is_terminal_name(exe_name) {
+        return Some("CTRL+SHIFT");
+    }
+    copy_modifiers(class)
+        .or_else(|| copy_modifiers(exe_name))
+        .or_else(|| {
+            window["pid"]
+                .as_u64()
+                .filter(|&pid| pid > 0)
+                .map(|_| "CTRL")
+        })
+}
+
+fn vscode_editor_data_is_empty_selection(bytes: &[u8]) -> bool {
+    serde_json::from_slice::<Value>(bytes)
+        .ok()
+        .and_then(|value| value.get("isFromEmptySelection")?.as_bool())
+        == Some(true)
+}
+
+fn read_chromium_pickle_u16_string(bytes: &[u8], offset: &mut usize) -> Option<String> {
+    let header = bytes.get(*offset..offset.checked_add(4)?)?;
+    let char_len = u32::from_le_bytes(header.try_into().ok()?) as usize;
+    let byte_len = char_len.checked_mul(2)?;
+    if byte_len > 64 * 1024 {
+        return None;
+    }
+    let start = offset.checked_add(4)?;
+    let end = start.checked_add(byte_len)?;
+    let raw = bytes.get(start..end)?;
+    let padded = (byte_len + 3) & !3;
+    *offset = start.checked_add(padded)?;
+    if *offset > bytes.len() {
+        return None;
+    }
+    let units: Vec<u16> = raw
+        .chunks_exact(2)
+        .map(|pair| u16::from_le_bytes([pair[0], pair[1]]))
+        .collect();
+    String::from_utf16(&units).ok()
+}
+
+/// Chromium/Electron packages custom clipboard MIME entries such as `vscode-editor-data`
+/// inside a Pickle map under `chromium/x-web-custom-data` on Linux.
+fn chromium_custom_data_is_empty_selection(bytes: &[u8]) -> bool {
+    let Some(size_bytes) = bytes.get(0..4) else {
+        return false;
+    };
+    let payload_size = u32::from_le_bytes(size_bytes.try_into().unwrap()) as usize;
+    let Some(body) = bytes
+        .get(4..)
+        .and_then(|rest| rest.get(..payload_size.min(rest.len())))
+    else {
+        return false;
+    };
+    let Some(count_bytes) = body.get(0..4) else {
+        return false;
+    };
+    let count = u32::from_le_bytes(count_bytes.try_into().unwrap()) as usize;
+    if count > 64 {
+        return false;
+    }
+    let mut offset = 4;
+    for _ in 0..count {
+        let Some(key) = read_chromium_pickle_u16_string(body, &mut offset) else {
+            return false;
+        };
+        let Some(value) = read_chromium_pickle_u16_string(body, &mut offset) else {
+            return false;
+        };
+        if key == "vscode-editor-data" {
+            return vscode_editor_data_is_empty_selection(value.as_bytes());
+        }
+    }
+    false
+}
+
+async fn is_empty_editor_selection(types: &str) -> bool {
+    if types.lines().any(|mime| mime == "vscode-editor-data") {
+        if let Ok(output) =
+            command(&["wl-paste", "--no-newline", "--type", "vscode-editor-data"]).await
+        {
+            if output.status.success() && vscode_editor_data_is_empty_selection(&output.stdout) {
+                return true;
+            }
+        }
+    }
+    if types
+        .lines()
+        .any(|mime| mime == "chromium/x-web-custom-data")
+    {
+        if let Ok(output) = command(&[
+            "wl-paste",
+            "--no-newline",
+            "--type",
+            "chromium/x-web-custom-data",
+        ])
+        .await
+        {
+            if output.status.success() && chromium_custom_data_is_empty_selection(&output.stdout) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 pub async fn read(source: &Value) -> Result<Option<String>, String> {
@@ -435,8 +538,18 @@ pub async fn read(source: &Value) -> Result<Option<String>, String> {
     // CLIPBOARD_TYPE is absent in some wl-clipboard watch implementations.
     // Validate the new offer's types before treating its bytes as text.
     let current_types = command(&["wl-paste", "--list-types"]).await;
+    let empty_editor_copy = match &current_types {
+        Ok(output) if output.status.success() => {
+            let types = String::from_utf8_lossy(&output.stdout);
+            is_empty_editor_selection(&types).await
+        }
+        _ => false,
+    };
     // Restore every clipboard representation before submitting any translation.
     restore_snapshot(sources).await?;
+    if empty_editor_copy {
+        return Ok(None);
+    }
     let current_types = current_types?;
     if !current_types.status.success()
         || !String::from_utf8_lossy(&current_types.stdout)
@@ -529,7 +642,7 @@ mod tests {
             .build()
             .unwrap()
             .block_on(async {
-                tokio::time::timeout(Duration::from_secs(3), accessibility_fixture())
+                tokio::time::timeout(Duration::from_secs(10), accessibility_fixture())
                     .await
                     .expect("Accessibility fixture timed out");
             });
@@ -631,10 +744,14 @@ mod tests {
     fn terminal_copy_does_not_interrupt_the_shell() {
         assert_eq!(copy_modifiers("com.mitchellh.ghostty"), Some("CTRL+SHIFT"));
         assert_eq!(copy_modifiers("chromium"), Some("CTRL"));
-        assert_eq!(copy_modifiers("Code"), None);
+        assert_eq!(copy_modifiers("antigravity"), Some("CTRL"));
+        assert_eq!(copy_modifiers("wechat"), Some("CTRL"));
+        assert_eq!(copy_modifiers("TelegramDesktop"), Some("CTRL"));
+        assert_eq!(copy_modifiers("Code"), Some("CTRL"));
+        assert_eq!(copy_modifiers(""), None);
     }
     #[test]
-    fn copy_recognizes_empty_app_ids_without_enabling_editor_line_copy() {
+    fn copy_recognizes_all_desktop_windows_and_terminal_tags() {
         let empty = serde_json::json!({"class":""});
         assert_eq!(
             window_copy_modifiers(
@@ -645,8 +762,15 @@ mod tests {
         );
         assert_eq!(copy_modifiers("chatgpt"), Some("CTRL"));
         assert_eq!(
-            window_copy_modifiers(&empty, Some(std::path::Path::new("/opt/code/code"))),
-            None
+            window_copy_modifiers(
+                &empty,
+                Some(std::path::Path::new("/opt/Antigravity/antigravity"))
+            ),
+            Some("CTRL")
+        );
+        assert_eq!(
+            window_copy_modifiers(&empty, Some(std::path::Path::new("/usr/bin/ghostty"))),
+            Some("CTRL+SHIFT")
         );
         assert_eq!(
             window_copy_modifiers(
@@ -655,5 +779,56 @@ mod tests {
             ),
             Some("CTRL+SHIFT")
         );
+        assert_eq!(
+            window_copy_modifiers(&serde_json::json!({"class":"", "pid":12345}), None),
+            Some("CTRL")
+        );
+        assert_eq!(window_copy_modifiers(&empty, None), None);
+    }
+    #[test]
+    fn detects_vscode_and_chromium_empty_selection_line_copy() {
+        assert!(vscode_editor_data_is_empty_selection(
+            br#"{"version":1,"isFromEmptySelection":true,"mode":"rust"}"#
+        ));
+        assert!(!vscode_editor_data_is_empty_selection(
+            br#"{"version":1,"isFromEmptySelection":false,"mode":"rust"}"#
+        ));
+        assert!(!vscode_editor_data_is_empty_selection(b"not-json"));
+
+        fn encode_pickle(entries: &[(&str, &str)]) -> Vec<u8> {
+            let mut body = Vec::new();
+            body.extend_from_slice(&(entries.len() as u32).to_le_bytes());
+            for (k, v) in entries {
+                for s in [k, v] {
+                    let units: Vec<u16> = s.encode_utf16().collect();
+                    body.extend_from_slice(&(units.len() as u32).to_le_bytes());
+                    for u in units {
+                        body.extend_from_slice(&u.to_le_bytes());
+                    }
+                    while body.len() % 4 != 0 {
+                        body.push(0);
+                    }
+                }
+            }
+            let mut out = (body.len() as u32).to_le_bytes().to_vec();
+            out.extend_from_slice(&body);
+            out
+        }
+
+        let empty_sel = encode_pickle(&[
+            ("other", "x"),
+            (
+                "vscode-editor-data",
+                r#"{"version":1,"isFromEmptySelection":true,"mode":"plaintext"}"#,
+            ),
+        ]);
+        assert!(chromium_custom_data_is_empty_selection(&empty_sel));
+
+        let real_sel = encode_pickle(&[(
+            "vscode-editor-data",
+            r#"{"version":1,"isFromEmptySelection":false,"mode":"plaintext"}"#,
+        )]);
+        assert!(!chromium_custom_data_is_empty_selection(&real_sel));
+        assert!(!chromium_custom_data_is_empty_selection(&[0, 1, 2]));
     }
 }

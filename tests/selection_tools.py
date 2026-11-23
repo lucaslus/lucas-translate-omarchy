@@ -21,8 +21,15 @@ from pathlib import Path
 home=Path(os.environ['HOME'])
 if '--primary' in sys.argv: raise SystemExit('PRIMARY must never be read')
 if '--list-types' in sys.argv:
-    if (home/'selection-dispatched').exists(): print('text/plain;charset=utf-8');raise SystemExit(0)
+    if (home/'selection-dispatched').exists():
+        mode_file=home/'selection-mode'
+        mode=mode_file.read_text() if mode_file.exists() else 'selected'
+        if mode=='empty_editor_line':
+            print('text/plain;charset=utf-8\\nvscode-editor-data');raise SystemExit(0)
+        print('text/plain;charset=utf-8');raise SystemExit(0)
     raise SystemExit('Nothing is copied')
+if '--type' in sys.argv and 'vscode-editor-data' in sys.argv:
+    sys.stdout.write('{"version":1,"isFromEmptySelection":true,"mode":"rust"}');raise SystemExit(0)
 if '--watch' not in sys.argv: raise SystemExit('Existing clipboard must never become a query')
 marker=home/'selection-dispatched'
 marker.unlink(missing_ok=True)
@@ -35,7 +42,7 @@ emit(b'stale clipboard and PRIMARY text')
 while not marker.exists(): time.sleep(.005)
 mode=home/'selection-mode'
 mode=mode.read_text() if mode.exists() else 'selected'
-if mode=='selected': emit(''' + repr(selected.encode()) + ''')
+if mode in ('selected', 'empty_editor_line'): emit(''' + repr(selected.encode()) + ''')
 elif mode=='blank': emit(b'   ')
 elif mode=='utf8': emit(b'\\xff')
 elif mode=='oversize': emit(b'x'*80001)

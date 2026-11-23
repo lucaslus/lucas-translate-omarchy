@@ -9,31 +9,31 @@ Omarchy 桌面上的划词翻译、查词、本地 OCR 与悬浮截图标注工�
 ## 核心功能
 
 ### 划词与输入翻译
-选中任意文字按 `Super+Ctrl+Shift+D` 直接翻译，没有选区时打开空白输入框。支持按语言自动选择目标语种，单个渠道超时或报错可以单独重试。划词优先读取无障碍选区，不支持时临时读取剪贴板并自动还原原内容。
+选中浏览器、终端、聊天软件或编辑器里的文字，按 `Super+Ctrl+Shift+D`（或右键点击顶栏图标）即可直接翻译；没有选区时打开空白输入框。支持按源语言自动匹配目标语种，单个渠道超时或报错可以单独重试。划词优先读取无障碍选区，不支持时临时复制选区并在读完后还原原剪贴板，在代码编辑器里未选中文字时不会误翻当前整行。
 
 ### 词典、免费翻译与 AI 流式输出
 内置有道词典（带英美音标与真人发音）、Bing 和 DeepL 免费翻译。也可以在设置页填入 DeepL 官方 API、OpenAI 兼容接口或本地 Ollama，AI 译文支持边生成边显示和随时取消。五个服务支持直接拖拽排序。
 
-### 本地截图 OCR
-按 `Super+Ctrl+Shift+S` 框选屏幕文字，在本地识别后直接翻译。按 `Super+Ctrl+Shift+C` 只把识别出的文字复制到剪贴板，不弹窗也不联网发送图片。
+### 截图 OCR 翻译与取字
+按 `Super+Ctrl+Shift+S` 框选屏幕上的中英文文字，在本地离线识别后直接翻译。按 `Super+Ctrl+Shift+C` 只把识别出的文字复制到剪贴板，不弹窗也不上传图片。设置页开启「整理 OCR 断行」后，会自动把多行截图里的硬换行合并成自然段落再翻译或复制。
 
 ### 悬浮截图标注
 按 `Super+Ctrl+Shift+P` 框选屏幕后弹出居中的悬浮编辑窗口，支持画框、箭头、马赛克和文字标注。底部居中的悬浮按钮条自动跟随当前 Omarchy 主题色，点「确认复制 (Enter)」或按 `Enter` 把结果复制到剪贴板并关闭；点「取消 (Esc)」、按 `Esc` 或点击窗口外部直接丢弃，不改原剪贴板，临时截图关闭即删。
 
-### 历史、收藏与主题跟随
-翻译记录和收藏保存在本地，支持关键词搜索、展开查看全部引擎结果和一键重译。切换 Omarchy 主题时窗口实时生效，快捷键和历史保留上限都可以在设置页调整。
+### 历史、收藏、双语界面与主题跟随
+翻译记录和收藏保存在本地，支持关键词搜索、展开查看全部引擎结果和一键重译。主界面与截图标注按钮均支持简体中文和 English 切换（默认跟随系统语言）；切换 Omarchy 主题时窗口实时生效，快捷键和历史保留上限都可以在设置页调整。
 
 ## 常用快捷键
 
-安装后可通过顶栏图标打开，或使用以下默认快捷键（可在设置页自定义）：
+安装后可通过顶栏图标打开（左键打开面板，右键划词翻译），或使用以下默认快捷键（可在设置页自定义）：
 
 | 功能 | 默认快捷键 | 命令 |
 | --- | --- | --- |
-| 打开翻译面板 | 点击顶栏图标 | `lucas-translate-native --show` |
+| 打开翻译面板 | 左键点击顶栏图标 | `lucas-translate-native --show` |
 | 新建空白输入 | `Super+Ctrl+Shift+I` | `lucas-translate-native --input` |
 | 显示 / 隐藏面板 | `Super+Ctrl+Shift+T` | `lucas-translate-native --toggle` |
-| 划词翻译 | `Super+Ctrl+Shift+D` | `lucas-translate-native --selection` |
-| 截图识别并翻译 | `Super+Ctrl+Shift+S` | `lucas-translate-native --screenshot` |
+| 划词翻译 | `Super+Ctrl+Shift+D` / 右键顶栏图标 | `lucas-translate-native --selection` |
+| 截图 OCR 识别并翻译 | `Super+Ctrl+Shift+S` | `lucas-translate-native --screenshot` |
 | 截图 OCR 复制文字 | `Super+Ctrl+Shift+C` | `lucas-translate-native --ocr` |
 | 悬浮截图标注 | `Super+Ctrl+Shift+P` | `lucas-translate-native --annotate` |
 
@@ -91,11 +91,11 @@ python3 scripts/install-omarchy-native.py
 Lucas Translate (`lucas.translate`) adds quick selection translation, dictionary lookup with phonetics and audio, local screenshot OCR, and an optional floating screenshot annotation editor to Omarchy. Its colors, corners, and fonts follow your active Omarchy theme automatically.
 
 Main features:
-- Selection and input translation (`Super+Ctrl+Shift+D` / `Super+Ctrl+Shift+I`) with per-language target rules and per-provider retry.
+- Selection and input translation (`Super+Ctrl+Shift+D`, right-click on the bar icon, or `Super+Ctrl+Shift+I`) across browsers, terminals, chat apps, and code editors (restoring the original clipboard and ignoring empty-selection line copies), with per-language target rules and per-provider retry.
 - Built-in Youdao dictionary (UK/US phonetics and audio), free Bing and DeepL translation, plus DeepL API and OpenAI-compatible or local Ollama streaming.
-- Local screenshot OCR via `tesseract` to translate (`Super+Ctrl+Shift+S`) or copy text straight to the clipboard (`Super+Ctrl+Shift+C`).
+- Local screenshot OCR via `tesseract` (offline English/Chinese): translate a region (`Super+Ctrl+Shift+S`) or copy text straight to the clipboard (`Super+Ctrl+Shift+C`), with optional line-break cleanup.
 - Optional floating screenshot annotation window (`Super+Ctrl+Shift+P`) with a theme-colored bottom action bar for Confirm & Copy (`Enter`) and Cancel (`Esc`).
-- Searchable local history, favorites, draggable provider order, and configurable shortcuts.
+- Full English and Simplified Chinese UI (including the screenshot editor buttons, following the system locale by default), searchable local history, favorites, draggable provider order, and configurable shortcuts.
 
 No sudo or pkexec is required. The installer runs as the desktop user only and refuses to run as root or while locked.
 

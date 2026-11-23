@@ -53,7 +53,7 @@ Item {
     function toggleName(provider) {
         return {YoudaoDict:"service.youdao",Bing:"service.bing",DeepLFree:"service.deepl",AI:"ai.enabled",DeepLApi:"official.enabled"}[provider]
     }
-    Component.onCompleted: loadOrder(service.serviceOrder)
+    Component.onCompleted: if (service) loadOrder(service.serviceOrder)
     onVisibleChanged: if (!visible) cancelDrag()
     Connections { target: root.service; function onServiceOrderChanged() { if (!root.dragging) root.loadOrder(root.service.serviceOrder) } }
     ListModel { id: providers }

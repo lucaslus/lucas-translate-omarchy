@@ -122,10 +122,10 @@ class Server:
                     trigger.unlink()
                     self.copy_requested.set()
                     if self.delay_copy: self.pending_copy=True
-                    elif self.selection is not None: self.replace({'text/plain;charset=utf-8':self.selection})
+                    elif self.selection is not None: self.replace(self.selection if isinstance(self.selection,dict) else {'text/plain;charset=utf-8':self.selection})
                 if self.pending_copy and self.release_copy.is_set():
                     self.pending_copy=False
-                    if self.selection is not None: self.replace({'text/plain;charset=utf-8':self.selection})
+                    if self.selection is not None: self.replace(self.selection if isinstance(self.selection,dict) else {'text/plain;charset=utf-8':self.selection})
                 for key,_ in self.selector.select(.005):
                     if key.data is None:
                         connection,_=self.listener.accept()
@@ -234,6 +234,27 @@ else:
         self.assertEqual(self.read(),{'text':'live selection'})
         result=subprocess.run(['wl-paste','--list-types'],capture_output=True,env=self.environment,timeout=2)
         self.assertNotEqual(result.returncode,0)
+
+    def test_chromium_vscode_empty_selection_line_copy_is_ignored_and_restores_clipboard(self):
+        def pickle(entries):
+            body=bytearray(struct.pack('<I',len(entries)))
+            for pair in entries:
+                for value in pair:
+                    encoded=value.encode('utf-16-le')
+                    body+=struct.pack('<I',len(encoded)//2)+encoded+b'\0'*((-len(encoded))%4)
+            return struct.pack('<I',len(body))+bytes(body)
+        self.server.selection={
+            'text/plain;charset=utf-8':b'    let accidental_line = true;\n',
+            'chromium/x-web-custom-data':pickle([('vscode-editor-data','{"version":1,"isFromEmptySelection":true}')]),
+        }
+        self.assertEqual(self.read(),{'text':''})
+        self.assertEqual(self.contents(),self.original)
+        self.server.selection={
+            'text/plain;charset=utf-8':b'selected word',
+            'chromium/x-web-custom-data':pickle([('vscode-editor-data','{"version":1,"isFromEmptySelection":false}')]),
+        }
+        self.assertEqual(self.read(),{'text':'selected word'})
+        self.assertEqual(self.contents(),self.original)
 
     def test_backend_shutdown_still_restores_clipboard(self):
         import time

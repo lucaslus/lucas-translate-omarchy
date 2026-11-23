@@ -287,7 +287,7 @@ class NativeBackend(unittest.TestCase):
         self.assertIn('CTRL+SHIFT', (self.home/'selection-dispatch-log').read_text())
 
     def test_actual_desktop_app_ids_copy_with_explicit_key_release(self):
-        for application in ['chatgpt', 'feishu', 'com.google.Chrome']:
+        for application in ['chatgpt', 'feishu', 'com.google.Chrome', 'antigravity', 'wechat', 'TelegramDesktop']:
             with self.subTest(application=application):
                 (self.home/'selection-window.json').write_text(json.dumps({'address':'0xabc','pid':2000000,'class':application}))
                 self.assertEqual(self.call('capture', {'action':'selection'})['text'], 'selected text\n')
@@ -297,10 +297,11 @@ class NativeBackend(unittest.TestCase):
                 self.assertIn('state = "up"', dispatch)
                 self.assertIn('address:0xabc', dispatch)
 
-    def test_editor_without_accessibility_does_not_copy_current_line(self):
-        (self.home/'selection-window.json').write_text(json.dumps({'address':'0xabc','pid':2000000,'class':'Code'}))
+    def test_editor_selection_works_and_empty_line_copy_is_ignored(self):
+        (self.home/'selection-window.json').write_text(json.dumps({'address':'0xabc','pid':2000000,'class':'antigravity'}))
+        self.assertEqual(self.call('capture', {'action':'selection'})['text'], 'selected text\n')
+        (self.home/'selection-mode').write_text('empty_editor_line')
         self.assertEqual(self.call('capture', {'action':'selection'})['text'], '')
-        self.assertFalse((self.home/'selection-dispatched').exists())
 
     def test_capture_cancellation_does_not_modify_clipboard(self):
         (self.home / 'bin/slurp').write_text('#!/usr/bin/env python3\nraise SystemExit(1)\n')
