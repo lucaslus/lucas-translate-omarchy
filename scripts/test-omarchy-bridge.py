@@ -53,7 +53,7 @@ def main():
             home=scratch / 'home'; data=home / '.local/share/lucas-translate-omarchy'; data.mkdir(parents=True)
             (data / 'config.json').write_text(json.dumps({'enabled':True,'base_url':f'http://127.0.0.1:{server.server_port}/v1',
                 'model':'bridge-test','preferences':{'language':'en'},
-                'services':{key:False for key in ['youdao','bing','deepl','google','deepl_api']}}))
+                'services':{key:False for key in ['youdao','bing','deepl','deepl_api']}}))
             hypr=home / '.config/hypr'; hypr.mkdir(parents=True); (hypr / 'hyprland.lua').write_text('-- isolated test config\n')
             tools=home / 'bin'; tools.mkdir()
             image=scratch / 'capture.png'

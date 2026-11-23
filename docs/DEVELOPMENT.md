@@ -204,7 +204,7 @@ as plain text, including markup-like provider content.
 
 Language rules can be added, removed and reordered, and are saved explicitly;
 unrelated settings refreshes preserve unfinished rule, shortcut and AI field edits.
-The six service switches form one vertical list. Drag a row's handle to reorder;
+The five service switches form one vertical list. Drag a row's handle to reorder;
 dropping saves immediately and reorders current and future translation cards,
 including single-service retries. The focused handle also supports Up/Down keys.
 Cancelled drags do not save; failed saves restore the persisted order, and quick

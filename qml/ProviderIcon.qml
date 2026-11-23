@@ -9,7 +9,6 @@ Item {
     readonly property rect symbolBounds: {
         if (brand === "youdao") return Qt.rect(9, 3, 31, 42)
         if (brand === "bing") return Qt.rect(6, 6, 20, 20)
-        if (brand === "google") return Qt.rect(2, 2, 60, 60)
         return Qt.rect(4, 40, 40, 44)
     }
     implicitWidth: Commons.Style.space(18)

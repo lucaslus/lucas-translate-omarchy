@@ -30,8 +30,8 @@ Item {
         }
     }
     NumberAnimation on rotation {
-        from: 0; to: 360; duration: 900
+        from: 0; to: 360; duration: Commons.Style.duration(900)
         loops: Animation.Infinite
-        running: root.running
+        running: root.running && !Commons.Style.reduceMotion
     }
 }

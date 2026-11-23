@@ -4,6 +4,7 @@
   "name": "Lucas Translate",
   "version": "0.1.0",
   "author": "Lucas",
+  "license": "MIT",
   "description": "Native, theme-following translation, dictionary and local OCR for Omarchy Shell.",
   "kinds": [
     "service",

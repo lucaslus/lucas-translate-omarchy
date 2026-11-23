@@ -19,7 +19,7 @@ ShellRoot {
     property Native.PanelContent panel: Native.PanelContent { controller: root.controller }
     property Window window: Window { width: 600; height: 780; visible: true; color: Commons.Color.background }
     Component.onCompleted: {
-        service.settings = {preferences:{language:"zh-CN"},services:{youdao:true,bing:true,google:true,deepl:true},
+        service.settings = {preferences:{language:"zh-CN"},services:{youdao:true,bing:true,deepl:true},
             ai:{enabled:false,base_url:"http://localhost:11434/v1",model:"",has_api_key:false},
             official:{enabled:false,pro:false,has_api_key:false},routing:{rules:[{from:"en",to:"zh-Hans"},{from:"zh-Hans",to:"en"}],fallback:"zh-Hans"}}
         service.shortcuts = {shortcuts:{input:"Super+Ctrl+Shift+I",toggle:"Super+Ctrl+Shift+T",selection:"Super+Ctrl+Shift+D",screenshot:"Super+Ctrl+Shift+S",ocr:"Super+Ctrl+Shift+C",annotate:"Super+Ctrl+Shift+P"},conflicts:{}}
@@ -30,8 +30,7 @@ ShellRoot {
             dict:{word:"hello",us_phonetic:"həˈloʊ",uk_phonetic:"həˈləʊ",meanings:[["int.","你好；喂；您好"]]},pinyin:"nǐ hǎo"},
             {service:"Bing",text:"hello",paragraphs:["你好"],detected_from:"en",detected_to:"zh-Hans",pinyin:"nǐ hǎo"}]
         if (Quickshell.env("NATIVE_PREVIEW_PAGE") === "overflow") service.cards=service.cards.concat([
-            {service:"DeepLFree",text:"hello",paragraphs:["你好。"],detected_from:"en",detected_to:"zh-Hans",pinyin:"nǐ hǎo"},
-            {service:"GoogleFree",text:"hello",paragraphs:["你好。"],detected_from:"en",detected_to:"zh-Hans",pinyin:"nǐ hǎo"}])
+            {service:"DeepLFree",text:"hello",paragraphs:["你好。"],detected_from:"en",detected_to:"zh-Hans",pinyin:"nǐ hǎo"}])
         if (Quickshell.env("NATIVE_PREVIEW_PAGE") === "loading") {
             service.busy = true
             service.cards = [{service:"YoudaoDict",pending:true},{service:"Bing",pending:true}]

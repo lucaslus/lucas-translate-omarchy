@@ -4,7 +4,6 @@ pub mod bing_free;
 pub mod deepl_api;
 pub mod deepl_free;
 mod error;
-pub mod google_free;
 pub mod openai_compat;
 pub mod youdao_dict;
 mod youdao_translate;
@@ -112,7 +111,6 @@ pub fn default_translate_services() -> Vec<Box<dyn TranslateService>> {
     vec![
         Box::new(youdao_dict::YoudaoDict),
         Box::new(deepl_free::DeepLFree::new()),
-        Box::new(google_free::GoogleFree),
     ]
 }
 

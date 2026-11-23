@@ -75,7 +75,7 @@ function failure(code,language) {
 }
 function message(value,language) {
     if (!value) return ""
-    var known={"Invalid usage settings":["Invalid usage settings","使用偏好无效"],"没有启用的翻译服务，请在偏好设置中开启并完成配置":["Enable a translation service in Settings.","请在设置中开启翻译服务。"],"翻译已完成，但历史记录保存失败":["Translation completed; history could not be saved.","翻译已完成，历史保存失败。"]}
+    var known={"Invalid usage settings":["Invalid usage settings","使用偏好无效"],"Missing backend executable. Run python3 scripts/install-omarchy-native.py to install the Rust backend.":["Missing backend executable. Run python3 scripts/install-omarchy-native.py to install the Rust backend.","未找到后端可执行文件，请运行 python3 scripts/install-omarchy-native.py 安装 Rust 后端。"],"没有启用的翻译服务，请在偏好设置中开启并完成配置":["Enable a translation service in Settings.","请在设置中开启翻译服务。"],"翻译已完成，但历史记录保存失败":["Translation completed; history could not be saved.","翻译已完成，历史保存失败。"]}
     if (known[value]) return known[value][language==="zh-CN" ? 1 : 0]
     // Desktop and storage errors have safe backend messages; localize their category.
     if (language!=="zh-CN" && /[\u3400-\u9fff]/.test(value)) return text("unavailable",language)

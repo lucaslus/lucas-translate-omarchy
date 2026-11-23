@@ -229,7 +229,7 @@ def main():
     group.add_argument('--apply')
     args = parser.parse_args()
     if os.geteuid() == 0:
-        raise ValueError('请以桌面用户运行，不要使用 sudo')
+        raise ValueError('请以普通桌面用户运行，不要以 root 权限执行')
     folder = Path.home() / '.config/hypr'
     if not (folder / 'hyprland.lua').is_file():
         raise ValueError('需要 Omarchy 的 Hyprland Lua 配置')

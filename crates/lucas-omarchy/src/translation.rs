@@ -92,13 +92,6 @@ pub fn catalog() -> Vec<ServiceInfo> {
             description: "免费通道 · 可用性受服务商影响",
             logo: "assets/logos/deepl.png",
         },
-        ServiceInfo {
-            id: "google",
-            service: "GoogleFree",
-            label: "Google",
-            description: "免费通道 · 部分网络需要代理",
-            logo: "assets/logos/google.png",
-        },
     ]
 }
 pub fn cancel(id: &str) {
@@ -510,7 +503,7 @@ mod tests {
             ..Default::default()
         };
         let services = crate::build_services(&ai, &config::ServiceToggles::default());
-        assert_eq!(services.len(), 5); // Four free providers plus independently failing AI.
+        assert_eq!(services.len(), 4); // Three free providers plus independently failing AI.
         let service = services.into_iter().find(|s| s.name() == "AI").unwrap();
         let r = query(service, "test", "en", "en", "ja");
         assert_eq!(r.service, "AI");

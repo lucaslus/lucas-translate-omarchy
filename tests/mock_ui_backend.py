@@ -8,9 +8,9 @@ import time
 
 lock = threading.Lock()
 state = {
-    'usage': {'service_order':['YoudaoDict','DeepLApi','AI','Bing','DeepLFree','GoogleFree'],'history_enabled':True,'history_days':0,'history_limit':0,'ocr_cleanup':False},
+    'usage': {'service_order':['YoudaoDict','DeepLApi','AI','Bing','DeepLFree'],'history_enabled':True,'history_days':0,'history_limit':0,'ocr_cleanup':False},
     'preferences': {'language': 'en'},
-    'services': {key: True for key in ['youdao', 'bing', 'google', 'deepl']},
+    'services': {key: True for key in ['youdao', 'bing', 'deepl']},
     'ai': {'enabled': False, 'base_url': 'http://localhost:11434/v1', 'model': '', 'has_api_key': False},
     'official': {'enabled': False, 'pro': False, 'has_api_key': False},
     'routing': {'rules': [{'from': 'en', 'to': 'zh-Hans'}, {'from': 'zh-Hans', 'to': 'en'}], 'fallback': 'zh-Hans'},

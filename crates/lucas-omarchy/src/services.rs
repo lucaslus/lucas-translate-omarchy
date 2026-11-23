@@ -1,7 +1,7 @@
 use crate::config;
 use lucas_core::services::{
-    bing_free::BingFree, deepl_free::DeepLFree, google_free::GoogleFree,
-    openai_compat::OpenAiCompat, youdao_dict::YoudaoDict, TranslateService,
+    bing_free::BingFree, deepl_free::DeepLFree, openai_compat::OpenAiCompat,
+    youdao_dict::YoudaoDict, TranslateService,
 };
 
 pub fn build_services(
@@ -17,9 +17,6 @@ pub fn build_services(
     }
     if toggles.bing {
         services.push(Box::new(BingFree));
-    }
-    if toggles.google {
-        services.push(Box::new(GoogleFree));
     }
     if toggles.deepl_api {
         match config::official_service() {

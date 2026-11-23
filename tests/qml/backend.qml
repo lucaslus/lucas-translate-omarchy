@@ -53,14 +53,14 @@ ShellRoot {
         {name:"real-drag-order-persists-without-policy-save",run:function() {
             var before=JSON.stringify(rpc("settings").usage)
             controller.page="settings"; driver.wait(30); find("settingsView").contentY=0; driver.wait(30)
-            var list=find("serviceList"), handle=find("service.drag.GoogleFree"), start=handle.mapToItem(list,handle.width/2,handle.height/2), target=list.stride/2
+            var list=find("serviceList"), handle=find("service.drag.DeepLFree"), start=handle.mapToItem(list,handle.width/2,handle.height/2), target=list.stride/2
             driver.mousePress(handle,handle.width/2,handle.height/2,Qt.LeftButton,Qt.NoModifier,0)
             for(var i=1;i<=12;i++) driver.mouseMove(list,start.x,start.y+(target-start.y)*i/12,12)
             driver.mouseRelease(list,start.x,target,Qt.LeftButton,Qt.NoModifier,0)
-            waitFor(function() { return !service.orderSaving && service.serviceOrder[0]==="GoogleFree" },"Rust order save missing")
+            waitFor(function() { return !service.orderSaving && service.serviceOrder[0]==="DeepLFree" },"Rust order save missing")
             var usage=rpc("settings").usage, old=JSON.parse(before); old.service_order=usage.service_order
             check(JSON.stringify(usage)===JSON.stringify(old),"Ordering changed history or OCR preferences")
-            check(!find("settingsView").usageDirty && !service.settings.services.google,"Disabled service was enabled or requires saving")
+            check(!find("settingsView").usageDirty && !service.settings.services.deepl,"Disabled service was enabled or requires saving")
             controller.page="translate"; driver.wait(30)
         }},
         {name:"real-invalid-query-unblocks-ui",run:function() { service.translate('x'.repeat(20001)); waitFor(function() { return !service.busy && !!service.error },"Invalid query remained busy") }},
@@ -73,7 +73,7 @@ ShellRoot {
         {name:"real-system-screenshot-editor",run:function() { var before=rpc("history.list").length; var result=rpc("capture",{action:"annotate"}); check(result.handled && result.action==="annotate","System editor did not run"); check(rpc("history.list").length===before && controller.page==="translate","Editor invoked translation or native annotation") }},
         {name:"real-history-clear-confirmation-command",run:function() { rpc("history.clear"); check(rpc("history.list").length===0,"History clear failed") }},
         {name:"real-enter-to-rust-provider-result",run:function() { service.clear(); panel.focusInput(); ["e","n","t","e","r"].forEach(function(key) { driver.keyClick(key) }); driver.keyClick(Qt.Key_Return,Qt.NoModifier,0); waitFor(function() { return !service.busy && service.cards.length && !service.cards[0].pending },"Enter did not reach Rust"); check(service.cards[0].paragraphs[0]==="translated: enter","Enter result wrong") }},
-        {name:"real-process-restart-preserves-saved-settings",run:function() { service.autostart=false; service.backend.running=false; waitFor(function() { return !service.ready },"Backend did not stop"); service.reconnect(); waitFor(function() { return service.ready && service.settings.routing.fallback==="fr" },"Restart lost saved settings"); check(service.serviceOrder[0]==="GoogleFree" && rpc("settings").usage.service_order[0]==="GoogleFree","Restart lost service order") }}
+        {name:"real-process-restart-preserves-saved-settings",run:function() { service.autostart=false; service.backend.running=false; waitFor(function() { return !service.ready },"Backend did not stop"); service.reconnect(); waitFor(function() { return service.ready && service.settings.routing.fallback==="fr" },"Restart lost saved settings"); check(service.serviceOrder[0]==="DeepLFree" && rpc("settings").usage.service_order[0]==="DeepLFree","Restart lost service order") }}
     ]
     function next() {
         if(index===cases.length) { console.log("NATIVE_BRIDGE_PASS cases="+index); service.autostart=false; service.backend.running=false; Qt.quit(); return }

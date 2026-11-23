@@ -59,7 +59,6 @@ impl Record {
             "Bing" => Some("Bing"),
             "DeepLFree" => Some("DeepLFree"),
             "DeepLApi" => Some("DeepLApi"),
-            "GoogleFree" => Some("GoogleFree"),
             "AI" => Some("AI"),
             _ => None,
         };

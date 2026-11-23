@@ -1,8 +1,8 @@
 .pragma library
 
-function defaultOrder() { return ["YoudaoDict","DeepLApi","AI","Bing","DeepLFree","GoogleFree"] }
+function defaultOrder() { return ["YoudaoDict","DeepLApi","AI","Bing","DeepLFree"] }
 function validOrder(order) {
-    return Array.isArray(order) && order.length === 6 && defaultOrder().every(function(provider) { return order.filter(function(item) { return item === provider }).length === 1 })
+    return Array.isArray(order) && order.length === defaultOrder().length && defaultOrder().every(function(provider) { return order.filter(function(item) { return item === provider }).length === 1 })
 }
 function ordered(cards, order) {
     return (cards || []).slice().sort(function(a,b) {
@@ -16,7 +16,6 @@ function providerBrand(provider) {
     if (["youdao", "youdaodict", "youdaotranslate"].indexOf(name) >= 0) return "youdao"
     if (name === "bing") return "bing"
     if (["deepl", "deeplfree", "deeplapi", "deepl_api"].indexOf(name) >= 0) return "deepl"
-    if (["google", "googlefree"].indexOf(name) >= 0) return "google"
     return ""
 }
 
@@ -24,7 +23,6 @@ function providerLabel(provider, language) {
     var brand = providerBrand(provider)
     if (brand === "youdao") return String(language || "").indexOf("zh") === 0 ? "有道" : "Youdao"
     if (brand === "deepl") return ["DeepLApi", "deepl_api"].indexOf(provider) >= 0 ? "DeepL API" : "DeepL"
-    if (brand === "google") return "Google"
     return provider
 }
 

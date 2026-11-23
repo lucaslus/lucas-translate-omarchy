@@ -40,7 +40,6 @@ pub struct ServiceToggles {
     pub youdao: bool,
     pub deepl: bool,
     pub bing: bool,
-    pub google: bool,
 }
 impl Default for ServiceToggles {
     fn default() -> Self {
@@ -49,7 +48,6 @@ impl Default for ServiceToggles {
             youdao: true,
             deepl: true,
             bing: true,
-            google: true,
         }
     }
 }
@@ -106,16 +104,9 @@ pub struct UsageConfig {
 impl Default for UsageConfig {
     fn default() -> Self {
         Self {
-            service_order: [
-                "YoudaoDict",
-                "DeepLApi",
-                "AI",
-                "Bing",
-                "DeepLFree",
-                "GoogleFree",
-            ]
-            .map(String::from)
-            .to_vec(),
+            service_order: ["YoudaoDict", "DeepLApi", "AI", "Bing", "DeepLFree"]
+                .map(String::from)
+                .to_vec(),
             history_enabled: true,
             history_days: 0,
             history_limit: 0,
@@ -125,6 +116,21 @@ impl Default for UsageConfig {
 }
 pub fn load_usage() -> Result<UsageConfig, String> {
     with_store(|s| Ok(s.load()?.usage))
+}
+fn normalize_service_order(order: &mut Vec<String>) {
+    let defaults = UsageConfig::default().service_order;
+    let mut normalized: Vec<String> = Vec::with_capacity(defaults.len());
+    for item in order.iter() {
+        if defaults.contains(item) && !normalized.contains(item) {
+            normalized.push(item.clone());
+        }
+    }
+    for item in defaults {
+        if !normalized.contains(&item) {
+            normalized.push(item);
+        }
+    }
+    *order = normalized;
 }
 fn valid_service_order(order: &[String]) -> bool {
     let providers = UsageConfig::default().service_order;
@@ -337,6 +343,7 @@ impl Store {
             }
             self.secret = Some((id, key));
         }
+        normalize_service_order(&mut doc.usage.service_order);
         self.cached = Some(doc.clone());
         Ok(doc)
     }
@@ -501,7 +508,6 @@ pub fn set_service(id: &str, enabled: bool) -> Result<ServiceToggles, String> {
                 "youdao" => d.services.youdao = enabled,
                 "deepl" => d.services.deepl = enabled,
                 "bing" => d.services.bing = enabled,
-                "google" => d.services.google = enabled,
                 "deepl_api" => {
                     if enabled && d.official.secret_id.is_none() {
                         return Err("请先在设置中保存 DeepL API Key".into());

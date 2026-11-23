@@ -109,14 +109,14 @@ mod tests {
         let now = Instant::now();
         let mut info = FailureInfo::new(ErrorCode::RateLimited);
         info.retry_after_secs = Some(120);
-        guard.observe("GoogleFree", Some(&mut info), now, 0);
+        guard.observe("DeepLFree", Some(&mut info), now, 0);
         assert!(guard.blocked("Bing", now).is_none());
         assert_eq!(
-            guard.blocked("GoogleFree", now).unwrap().retry_after_secs,
+            guard.blocked("DeepLFree", now).unwrap().retry_after_secs,
             Some(120)
         );
         assert!(guard
-            .blocked("GoogleFree", now + Duration::from_secs(121))
+            .blocked("DeepLFree", now + Duration::from_secs(121))
             .is_none());
     }
     #[test]
@@ -125,11 +125,11 @@ mod tests {
         let now = Instant::now();
         for expected in [60, 120, 240] {
             let mut info = FailureInfo::new(ErrorCode::RateLimited);
-            guard.observe("GoogleFree", Some(&mut info), now, 0);
+            guard.observe("DeepLFree", Some(&mut info), now, 0);
             assert_eq!(info.retry_after_secs, Some(expected));
         }
-        guard.observe("GoogleFree", None, now, 0);
-        assert!(guard.blocked("GoogleFree", now).is_none());
+        guard.observe("DeepLFree", None, now, 0);
+        assert!(guard.blocked("DeepLFree", now).is_none());
     }
     #[test]
     fn excessive_retry_after_keeps_reported_and_actual_delay_consistent() {
@@ -137,9 +137,9 @@ mod tests {
         let now = Instant::now();
         let mut info = FailureInfo::new(ErrorCode::RateLimited);
         info.retry_after_secs = Some(u64::MAX);
-        guard.observe("GoogleFree", Some(&mut info), now, 5);
+        guard.observe("DeepLFree", Some(&mut info), now, 5);
         assert_eq!(
-            guard.blocked("GoogleFree", now).unwrap().retry_after_secs,
+            guard.blocked("DeepLFree", now).unwrap().retry_after_secs,
             info.retry_after_secs
         );
     }
@@ -148,7 +148,7 @@ mod tests {
         let guard = Guard::default();
         let _permit = guard.slot("Bing").acquire_owned().await.unwrap();
         assert!(guard.slot("Bing").try_acquire_owned().is_err());
-        assert!(guard.slot("GoogleFree").try_acquire_owned().is_ok());
+        assert!(guard.slot("DeepLFree").try_acquire_owned().is_ok());
     }
     #[test]
     fn short_backoff_and_configuration_failures_do_not_permanently_lock_a_provider() {

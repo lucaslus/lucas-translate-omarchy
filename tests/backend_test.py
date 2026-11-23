@@ -53,7 +53,7 @@ class NativeBackend(unittest.TestCase):
         data.mkdir(parents=True)
         (data / 'config.json').write_text(json.dumps({
             'enabled': True, 'base_url': f'http://127.0.0.1:{self.provider.server_port}/v1', 'model': 'local-test',
-            'services': {key: False for key in ['youdao', 'deepl', 'bing', 'google', 'deepl_api']},
+            'services': {key: False for key in ['youdao', 'deepl', 'bing', 'deepl_api']},
         }))
         tools = self.home / 'bin'
         tools.mkdir()

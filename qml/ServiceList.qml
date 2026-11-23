@@ -51,7 +51,7 @@ Item {
         dragging=""; loadOrder(service.serviceOrder)
     }
     function toggleName(provider) {
-        return {YoudaoDict:"service.youdao",Bing:"service.bing",DeepLFree:"service.deepl",GoogleFree:"service.google",AI:"ai.enabled",DeepLApi:"official.enabled"}[provider]
+        return {YoudaoDict:"service.youdao",Bing:"service.bing",DeepLFree:"service.deepl",AI:"ai.enabled",DeepLApi:"official.enabled"}[provider]
     }
     Component.onCompleted: loadOrder(service.serviceOrder)
     onVisibleChanged: if (!visible) cancelDrag()
@@ -59,7 +59,7 @@ Item {
     ListModel { id: providers }
     Column {
         width: root.width; spacing: root.rowSpacing
-        move: Transition { NumberAnimation { properties: "x,y"; duration: 100; easing.type: Easing.OutCubic } }
+        move: Transition { NumberAnimation { properties: "x,y"; duration: Commons.Style.duration(100); easing.type: Easing.OutCubic } }
         Repeater {
             model: providers
             Item {

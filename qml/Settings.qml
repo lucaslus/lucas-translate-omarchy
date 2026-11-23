@@ -12,7 +12,7 @@ Flickable {
     required property var service
     property var draftShortcuts: ({})
     property bool usageDirty: false
-    property var usageDraft: ({service_order:["YoudaoDict","DeepLApi","AI","Bing","DeepLFree","GoogleFree"],history_enabled:true,history_days:0,history_limit:0,ocr_cleanup:false})
+    property var usageDraft: ({service_order:["YoudaoDict","DeepLApi","AI","Bing","DeepLFree"],history_enabled:true,history_days:0,history_limit:0,ocr_cleanup:false})
     property bool shortcutsDirty: false
     property bool aiDirty: false
     property bool aiSwitchDirty: false
@@ -53,7 +53,7 @@ Flickable {
     function providerEnabled(provider) {
         if (provider==="AI") return aiChecked
         if (provider==="DeepLApi") return officialChecked
-        return !!document.services && document.services[{YoudaoDict:"youdao",Bing:"bing",DeepLFree:"deepl",GoogleFree:"google"}[provider]]===true
+        return !!document.services && document.services[{YoudaoDict:"youdao",Bing:"bing",DeepLFree:"deepl"}[provider]]===true
     }
     function loadOfficial() { if (!officialDirty && document.official) officialChecked=document.official.enabled===true }
     function toggleProvider(provider) {
@@ -73,7 +73,7 @@ Flickable {
                     root.saving=false; root.officialDirty=false; root.loadOfficial()
                 })
             }
-        } else service.save("service.set",{id:{YoudaoDict:"youdao",Bing:"bing",DeepLFree:"deepl",GoogleFree:"google"}[provider],enabled:!providerEnabled(provider)})
+        } else service.save("service.set",{id:{YoudaoDict:"youdao",Bing:"bing",DeepLFree:"deepl"}[provider],enabled:!providerEnabled(provider)})
     }
     function changeRule(index, key, value) {
         var rules = routingRules.map(function(rule) { return Object.assign({},rule) })
@@ -277,7 +277,7 @@ Flickable {
         NativeButton { foreground: Commons.Color.popups.text;
             text: root.tr("openLogs"); focusable: true; enabled: !!root.service && root.service.ready
             onClicked: root.service.request("logs.directory", {}, function(ok, directory) {
-                if (ok) Qt.openUrlExternally("file://" + directory)
+                if (ok) Qt.openUrlExternally("file://" + encodeURI(directory))
             })
         }
     }
